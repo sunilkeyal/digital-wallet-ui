@@ -1,23 +1,23 @@
 import { Link } from 'react-router-dom';
-import { Box, Typography } from '@mui/material';
+import { Box, Text } from '@mantine/core';
 
 const Footer = () => {
   return (
-    <Box 
-      component="footer" 
-      sx={{ 
-        py: 2, 
-        px: 2, 
-        mt: 'auto', 
-        backgroundColor: '#f5f5f5',
-        borderTop: '1px solid #e0e0e0',
-        width: '100%'
+    <Box
+      component="footer"
+      py="md"
+      px="md"
+      mt="auto"
+      style={{
+        backgroundColor: 'var(--mantine-color-gray-1)',
+        borderTop: '1px solid var(--mantine-color-gray-3)',
+        width: '100%',
       }}
     >
-      <Typography variant="body2" color="text.secondary" align="left">
+      <Text size="sm" c="dimmed">
         © {new Date().getFullYear()} Digital Wallet. All rights reserved.
-      </Typography>
-      <Typography variant="body2" color="text.secondary" align="left" sx={{ mt: 0.5 }}>
+      </Text>
+      <Text size="sm" c="dimmed" mt={4}>
         <Link to="/privacy" style={{ textDecoration: 'none', color: 'inherit' }}>
           Privacy Policy
         </Link>
@@ -25,7 +25,7 @@ const Footer = () => {
         <Link to="/terms" style={{ textDecoration: 'none', color: 'inherit' }}>
           Terms of Service
         </Link>
-      </Typography>
+      </Text>
     </Box>
   );
 };

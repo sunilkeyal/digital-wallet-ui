@@ -1,22 +1,19 @@
 import { useState, useEffect, type ChangeEvent, type FormEvent } from 'react';
-import {
-  Box, Typography, Paper, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Button, Dialog, DialogTitle, DialogContent,
-  DialogActions, TextField, Alert, Select, MenuItem, FormControl, InputLabel,
-  TablePagination
-} from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
+import { Box, Text, Paper, Table, Button, Modal, TextInput, Select, Alert, Pagination, Group, ActionIcon } from '@mantine/core';
+import { DateInput } from '@mantine/dates';
+import { useDisclosure } from '@mantine/hooks';
+import { IconPlus, IconTrash } from '@tabler/icons-react';
 import { immunizationApi } from '../services/api';
 import type { ImmunizationDto, PageResponse } from '../types';
 
-const PAGE_SIZE_OPTIONS = [10, 20, 50, 100, 1000]; // 1000 acts as "ALL"
+const PAGE_SIZE_OPTIONS = ['10', '20', '50', '100', 'ALL'];
 
 const Immunizations = () => {
   const [immunizations, setImmunizations] = useState<ImmunizationDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [openDialog, setOpenDialog] = useState(false);
-  const [page, setPage] = useState(0);
+  const [opened, { open, close }] = useDisclosure(false);
+  const [page, setPage] = useState(1);
   const [size, setSize] = useState(10);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
@@ -40,7 +37,7 @@ const Immunizations = () => {
   const fetchImmunizations = async () => {
     try {
       setLoading(true);
-      const response = await immunizationApi.getAll(page, size);
+      const response = await immunizationApi.getAll(page - 1, size);
       const data = response.data;
 
       if (Array.isArray(data)) {
@@ -61,14 +58,14 @@ const Immunizations = () => {
     }
   };
 
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleInputChange = (field: string, value: string) => {
+    setFormData({ ...formData, [field]: value });
   };
 
   const handleSubmit = async () => {
     try {
       await immunizationApi.create(formData);
-      setOpenDialog(false);
+      close();
       setFormData({
         vaccineName: '',
         manufacturer: '',
@@ -94,170 +91,138 @@ const Immunizations = () => {
     }
   };
 
-  const handlePageChange = (event: unknown, newPage: number) => {
+  const handlePageChange = (newPage: number) => {
     setPage(newPage);
   };
 
-  const handleSizeChange = (event: any) => {
-    const newSize = Number(event.target.value);
+  const handleSizeChange = (value: string | null) => {
+    const newSize = value === 'ALL' ? 1000 : Number(value);
     setSize(newSize);
-    setPage(0);
+    setPage(1);
   };
 
-  if (loading) return <Typography>Loading...</Typography>;
+  if (loading) return <Text>Loading...</Text>;
 
   return (
-    <Box sx={{ mt: 0, mb: 0 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-        <Typography variant="h4">Immunization History</Typography>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>Page Size</InputLabel>
-            <Select value={size} label="Page Size" onChange={handleSizeChange}>
-              {PAGE_SIZE_OPTIONS.map(option => (
-                <MenuItem key={option} value={option}>
-                  {option === 1000 ? 'ALL' : option}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpenDialog(true)}>
+    <Box mt={0} mb={0}>
+      <Group justify="space-between" mb="xs">
+        <Text size="xl" fw={700}>Immunization History</Text>
+        <Group gap="md">
+          <Select
+            size="sm"
+            value={size === 1000 ? 'ALL' : String(size)}
+            onChange={handleSizeChange}
+            data={PAGE_SIZE_OPTIONS}
+            style={{ width: 120 }}
+          />
+          <Button leftSection={<IconPlus size={16} />} onClick={open}>
             Add Record
           </Button>
-        </Box>
-      </Box>
+        </Group>
+      </Group>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && <Alert color="red" mb="md">{error}</Alert>}
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Vaccine</TableCell>
-              <TableCell>Manufacturer</TableCell>
-              <TableCell>Lot Number</TableCell>
-              <TableCell>Date Administered</TableCell>
-              <TableCell>Administered By</TableCell>
-              <TableCell>Facility</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
+      <Paper radius="md">
+        <Table striped highlightOnHover>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Vaccine</Table.Th>
+              <Table.Th>Manufacturer</Table.Th>
+              <Table.Th>Lot Number</Table.Th>
+              <Table.Th>Date Administered</Table.Th>
+              <Table.Th>Administered By</Table.Th>
+              <Table.Th>Facility</Table.Th>
+              <Table.Th>Actions</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
             {immunizations.map((imm) => (
-              <TableRow key={imm.id}>
-                <TableCell>{imm.vaccineName}</TableCell>
-                <TableCell>{imm.manufacturer}</TableCell>
-                <TableCell>{imm.lotNumber}</TableCell>
-                <TableCell>{imm.administrationDate}</TableCell>
-                <TableCell>{imm.administeredBy}</TableCell>
-                <TableCell>{imm.facilityName}</TableCell>
-                <TableCell>
-                  <Button size="small" color="error" onClick={() => handleDelete(imm.id!)}>
-                    Delete
-                  </Button>
-                </TableCell>
-              </TableRow>
+              <Table.Tr key={imm.id}>
+                <Table.Td>{imm.vaccineName}</Table.Td>
+                <Table.Td>{imm.manufacturer}</Table.Td>
+                <Table.Td>{imm.lotNumber}</Table.Td>
+                <Table.Td>{imm.administrationDate}</Table.Td>
+                <Table.Td>{imm.administeredBy}</Table.Td>
+                <Table.Td>{imm.facilityName}</Table.Td>
+                <Table.Td>
+                  <ActionIcon color="red" onClick={() => handleDelete(imm.id!)}>
+                    <IconTrash size={16} />
+                  </ActionIcon>
+                </Table.Td>
+              </Table.Tr>
             ))}
             {immunizations.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} align="center">
+              <Table.Tr>
+                <Table.Td colSpan={7} ta="center">
                   No immunization records found
-                </TableCell>
-              </TableRow>
+                </Table.Td>
+              </Table.Tr>
             )}
-          </TableBody>
+          </Table.Tbody>
         </Table>
-        {isPaginated && (
-          <TablePagination
-            component="div"
-            count={totalElements}
-            page={page}
-            onPageChange={handlePageChange}
-            rowsPerPage={size}
-            rowsPerPageOptions={[]}
-            labelDisplayedRows={({ from, to, count }) => `${from}-${to} of ${count}`}
-          />
+        {isPaginated && totalPages > 1 && (
+          <Group justify="center" p="md">
+            <Pagination value={page} onChange={handlePageChange} total={totalPages} />
+          </Group>
         )}
-      </TableContainer>
+      </Paper>
 
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Immunization Record</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            name="vaccineName"
-            label="Vaccine Name"
-            fullWidth
-            value={formData.vaccineName}
-            onChange={handleInputChange}
-          />
-          <TextField
-            margin="dense"
-            name="manufacturer"
-            label="Manufacturer"
-            fullWidth
-            value={formData.manufacturer}
-            onChange={handleInputChange}
-          />
-          <TextField
-            margin="dense"
-            name="lotNumber"
-            label="Lot Number"
-            fullWidth
-            value={formData.lotNumber}
-            onChange={handleInputChange}
-          />
-          <TextField
-            margin="dense"
-            name="administrationDate"
-            label="Date Administered"
-            type="date"
-            fullWidth
-            slotProps={{ inputLabel: { shrink: true } }}
-            value={formData.administrationDate}
-            onChange={handleInputChange}
-          />
-          <TextField
-            margin="dense"
-            name="administeredBy"
-            label="Administered By"
-            fullWidth
-            value={formData.administeredBy}
-            onChange={handleInputChange}
-          />
-          <TextField
-            margin="dense"
-            name="facilityName"
-            label="Facility Name"
-            fullWidth
-            value={formData.facilityName}
-            onChange={handleInputChange}
-          />
-          <TextField
-            margin="dense"
-            name="facilityAddress"
-            label="Facility Address"
-            fullWidth
-            value={formData.facilityAddress}
-            onChange={handleInputChange}
-          />
-          <TextField
-            margin="dense"
-            name="notes"
-            label="Notes"
-            fullWidth
-            multiline
-            rows={3}
-            value={formData.notes}
-            onChange={handleInputChange}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained">Add Record</Button>
-        </DialogActions>
-      </Dialog>
+      <Modal opened={opened} onClose={close} title="Add Immunization Record" centered>
+        <TextInput
+          label="Vaccine Name"
+          value={formData.vaccineName}
+          onChange={(e) => handleInputChange('vaccineName', e.target.value)}
+          mb="sm"
+          required
+        />
+        <TextInput
+          label="Manufacturer"
+          value={formData.manufacturer}
+          onChange={(e) => handleInputChange('manufacturer', e.target.value)}
+          mb="sm"
+        />
+        <TextInput
+          label="Lot Number"
+          value={formData.lotNumber}
+          onChange={(e) => handleInputChange('lotNumber', e.target.value)}
+          mb="sm"
+        />
+        <DateInput
+          label="Date Administered"
+          value={formData.administrationDate ? new Date(formData.administrationDate) : null}
+          onChange={(date) => handleInputChange('administrationDate', date ? date.toISOString().split('T')[0] : '')}
+          mb="sm"
+        />
+        <TextInput
+          label="Administered By"
+          value={formData.administeredBy}
+          onChange={(e) => handleInputChange('administeredBy', e.target.value)}
+          mb="sm"
+        />
+        <TextInput
+          label="Facility Name"
+          value={formData.facilityName}
+          onChange={(e) => handleInputChange('facilityName', e.target.value)}
+          mb="sm"
+        />
+        <TextInput
+          label="Facility Address"
+          value={formData.facilityAddress}
+          onChange={(e) => handleInputChange('facilityAddress', e.target.value)}
+          mb="sm"
+        />
+        <TextInput
+          label="Notes"
+          value={formData.notes}
+          onChange={(e) => handleInputChange('notes', e.target.value)}
+          mb="md"
+        />
+        <Group justify="flex-end">
+          <Button variant="default" onClick={close}>Cancel</Button>
+          <Button onClick={handleSubmit}>Add Record</Button>
+        </Group>
+      </Modal>
     </Box>
   );
 };

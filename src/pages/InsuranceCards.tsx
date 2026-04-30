@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
-import {
-  Container, Typography, Paper, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Button, Box, Dialog, DialogTitle, DialogContent,
-  DialogActions, TextField, Alert
-} from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
+import { Box, Text, Paper, Table, Button, Modal, TextInput, Alert, ActionIcon, Group } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
+import { IconPlus, IconTrash } from '@tabler/icons-react';
+import { DateInput } from '@mantine/dates';
 import { insuranceCardApi } from '../services/api';
 import type { InsuranceCardDto } from '../types';
 
@@ -12,7 +10,7 @@ const InsuranceCards = () => {
   const [cards, setCards] = useState<InsuranceCardDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [openDialog, setOpenDialog] = useState(false);
+  const [opened, { open, close }] = useDisclosure(false);
   const [formData, setFormData] = useState<InsuranceCardDto>({
     provider: '',
     policyNumber: '',
@@ -38,14 +36,14 @@ const InsuranceCards = () => {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleInputChange = (field: string, value: string) => {
+    setFormData({ ...formData, [field]: value });
   };
 
   const handleSubmit = async () => {
     try {
       await insuranceCardApi.create(formData);
-      setOpenDialog(false);
+      close();
       setFormData({
         provider: '',
         policyNumber: '',
@@ -70,127 +68,107 @@ const InsuranceCards = () => {
     }
   };
 
-  if (loading) return <Typography>Loading...</Typography>;
+  if (loading) return <Text>Loading...</Text>;
 
   return (
-    <Box sx={{ mt: 0, mb: 0 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-        <Typography variant="h4">Insurance Cards</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpenDialog(true)}>
+    <Box mt={0} mb={0}>
+      <Group justify="space-between" mb="xs">
+        <Text size="xl" fw={700}>Insurance Cards</Text>
+        <Button leftSection={<IconPlus size={16} />} onClick={open}>
           Add Card
         </Button>
-      </Box>
+      </Group>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && <Alert color="red" mb="md">{error}</Alert>}
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Provider</TableCell>
-              <TableCell>Policy Number</TableCell>
-              <TableCell>Member Name</TableCell>
-              <TableCell>Effective Date</TableCell>
-              <TableCell>Expiry Date</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
+      <Paper radius="md">
+        <Table striped highlightOnHover>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Provider</Table.Th>
+              <Table.Th>Policy Number</Table.Th>
+              <Table.Th>Member Name</Table.Th>
+              <Table.Th>Effective Date</Table.Th>
+              <Table.Th>Expiry Date</Table.Th>
+              <Table.Th>Actions</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
             {cards.map((card) => (
-              <TableRow key={card.id}>
-                <TableCell>{card.provider}</TableCell>
-                <TableCell>{card.policyNumber}</TableCell>
-                <TableCell>{card.memberName}</TableCell>
-                <TableCell>{card.effectiveDate}</TableCell>
-                <TableCell>{card.expiryDate}</TableCell>
-                <TableCell>
-                  <Button size="small" color="error" onClick={() => handleDelete(card.id!)}>
-                    Delete
-                  </Button>
-                </TableCell>
-              </TableRow>
+              <Table.Tr key={card.id}>
+                <Table.Td>{card.provider}</Table.Td>
+                <Table.Td>{card.policyNumber}</Table.Td>
+                <Table.Td>{card.memberName}</Table.Td>
+                <Table.Td>{card.effectiveDate}</Table.Td>
+                <Table.Td>{card.expiryDate}</Table.Td>
+                <Table.Td>
+                  <ActionIcon color="red" onClick={() => handleDelete(card.id!)}>
+                    <IconTrash size={16} />
+                  </ActionIcon>
+                </Table.Td>
+              </Table.Tr>
             ))}
             {cards.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} align="center">
+              <Table.Tr>
+                <Table.Td colSpan={6} ta="center">
                   No insurance cards found
-                </TableCell>
-              </TableRow>
+                </Table.Td>
+              </Table.Tr>
             )}
-          </TableBody>
+          </Table.Tbody>
         </Table>
-      </TableContainer>
+      </Paper>
 
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Insurance Card</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            name="provider"
-            label="Provider"
-            fullWidth
-            value={formData.provider}
-            onChange={handleInputChange}
-          />
-          <TextField
-            margin="dense"
-            name="policyNumber"
-            label="Policy Number"
-            fullWidth
-            value={formData.policyNumber}
-            onChange={handleInputChange}
-          />
-          <TextField
-            margin="dense"
-            name="groupNumber"
-            label="Group Number"
-            fullWidth
-            value={formData.groupNumber}
-            onChange={handleInputChange}
-          />
-          <TextField
-            margin="dense"
-            name="effectiveDate"
-            label="Effective Date"
-            type="date"
-            fullWidth
-            slotProps={{ inputLabel: { shrink: true } }}
-            value={formData.effectiveDate}
-            onChange={handleInputChange}
-          />
-          <TextField
-            margin="dense"
-            name="expiryDate"
-            label="Expiry Date"
-            type="date"
-            fullWidth
-            slotProps={{ inputLabel: { shrink: true } }}
-            value={formData.expiryDate}
-            onChange={handleInputChange}
-          />
-          <TextField
-            margin="dense"
-            name="memberName"
-            label="Member Name"
-            fullWidth
-            value={formData.memberName}
-            onChange={handleInputChange}
-          />
-          <TextField
-            margin="dense"
-            name="relationship"
-            label="Relationship"
-            fullWidth
-            value={formData.relationship}
-            onChange={handleInputChange}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained">Add Card</Button>
-        </DialogActions>
-      </Dialog>
+      <Modal opened={opened} onClose={close} title="Add Insurance Card" centered>
+        <TextInput
+          label="Provider"
+          value={formData.provider}
+          onChange={(e) => handleInputChange('provider', e.target.value)}
+          mb="sm"
+          required
+        />
+        <TextInput
+          label="Policy Number"
+          value={formData.policyNumber}
+          onChange={(e) => handleInputChange('policyNumber', e.target.value)}
+          mb="sm"
+          required
+        />
+        <TextInput
+          label="Group Number"
+          value={formData.groupNumber}
+          onChange={(e) => handleInputChange('groupNumber', e.target.value)}
+          mb="sm"
+        />
+        <DateInput
+          label="Effective Date"
+          value={formData.effectiveDate ? new Date(formData.effectiveDate) : null}
+          onChange={(date) => handleInputChange('effectiveDate', date ? date.toISOString().split('T')[0] : '')}
+          mb="sm"
+        />
+        <DateInput
+          label="Expiry Date"
+          value={formData.expiryDate ? new Date(formData.expiryDate) : null}
+          onChange={(date) => handleInputChange('expiryDate', date ? date.toISOString().split('T')[0] : '')}
+          mb="sm"
+        />
+        <TextInput
+          label="Member Name"
+          value={formData.memberName}
+          onChange={(e) => handleInputChange('memberName', e.target.value)}
+          mb="sm"
+        />
+        <TextInput
+          label="Relationship"
+          value={formData.relationship}
+          onChange={(e) => handleInputChange('relationship', e.target.value)}
+          mb="md"
+        />
+        <Group justify="flex-end">
+          <Button variant="default" onClick={close}>Cancel</Button>
+          <Button onClick={handleSubmit}>Add Card</Button>
+        </Group>
+      </Modal>
     </Box>
   );
 };

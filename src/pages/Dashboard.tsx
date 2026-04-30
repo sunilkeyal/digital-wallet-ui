@@ -1,25 +1,25 @@
-import { Box, Typography } from '@mui/material';
+import { Box, Text, Paper } from '@mantine/core';
 import { useAuth } from '../context/AuthContext';
 
 const Dashboard = () => {
   const { user } = useAuth();
 
   return (
-    <Box sx={{ mt: 0, mb: 0 }}>
-      <Typography variant="h4" sx={{ mb: 1 }}>
+    <Box mt={0} mb={0}>
+      <Text size="xl" fw={700} mb="xs">
         Welcome, {user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.email}
-      </Typography>
-      <Typography variant="body1" color="text.secondary">
+      </Text>
+      <Text c="dimmed" mb="md">
         This is your digital wallet dashboard. Use the navigation menu on the left to access your immunization history, insurance cards, and lab results.
-      </Typography>
-      <Box sx={{ mt: 4, p: 3, backgroundColor: '#f5f5f5', borderRadius: 2 }}>
-        <Typography variant="h6" gutterBottom>
+      </Text>
+      <Paper p="md" radius="md" style={{ backgroundColor: 'var(--mantine-color-blue-0)', border: '1px solid var(--mantine-color-blue-2)' }}>
+        <Text fw={600} size="lg" mb="xs" c="blue.8">
           Quick Stats
-        </Typography>
-        <Typography variant="body2">
+        </Text>
+        <Text size="sm" c="dimmed">
           Use the navigation menu to view and manage your health records.
-        </Typography>
-      </Box>
+        </Text>
+      </Paper>
     </Box>
   );
 };

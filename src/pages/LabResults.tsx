@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
-import {
-  Container, Typography, Paper, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Button, Box, Dialog, DialogTitle, DialogContent,
-  DialogActions, TextField, Alert
-} from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
+import { Box, Text, Paper, Table, Button, Modal, TextInput, Alert, ActionIcon, Group } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
+import { IconPlus, IconTrash } from '@tabler/icons-react';
+import { DateInput } from '@mantine/dates';
 import { labResultApi } from '../services/api';
 import type { LabResultDto } from '../types';
 
@@ -12,7 +10,7 @@ const LabResults = () => {
   const [results, setResults] = useState<LabResultDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [openDialog, setOpenDialog] = useState(false);
+  const [opened, { open, close }] = useDisclosure(false);
   const [formData, setFormData] = useState<LabResultDto>({
     testName: '',
     testDate: '',
@@ -39,14 +37,14 @@ const LabResults = () => {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleInputChange = (field: string, value: string) => {
+    setFormData({ ...formData, [field]: value });
   };
 
   const handleSubmit = async () => {
     try {
       await labResultApi.create(formData);
-      setOpenDialog(false);
+      close();
       setFormData({
         testName: '',
         testDate: '',
@@ -72,139 +70,116 @@ const LabResults = () => {
     }
   };
 
-  if (loading) return <Typography>Loading...</Typography>;
+  if (loading) return <Text>Loading...</Text>;
 
   return (
-    <Box sx={{ mt: 0, mb: 0 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-        <Typography variant="h4">Lab Results</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpenDialog(true)}>
+    <Box mt={0} mb={0}>
+      <Group justify="space-between" mb="xs">
+        <Text size="xl" fw={700}>Lab Results</Text>
+        <Button leftSection={<IconPlus size={16} />} onClick={open}>
           Add Result
         </Button>
-      </Box>
+      </Group>
 
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && <Alert color="red" mb="md">{error}</Alert>}
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Test Name</TableCell>
-              <TableCell>Test Date</TableCell>
-              <TableCell>Result</TableCell>
-              <TableCell>Unit</TableCell>
-              <TableCell>Reference Range</TableCell>
-              <TableCell>Ordering Provider</TableCell>
-              <TableCell>Laboratory</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
+      <Paper radius="md">
+        <Table striped highlightOnHover>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>Test Name</Table.Th>
+              <Table.Th>Test Date</Table.Th>
+              <Table.Th>Result</Table.Th>
+              <Table.Th>Unit</Table.Th>
+              <Table.Th>Reference Range</Table.Th>
+              <Table.Th>Ordering Provider</Table.Th>
+              <Table.Th>Laboratory</Table.Th>
+              <Table.Th>Actions</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
             {results.map((result) => (
-              <TableRow key={result.id}>
-                <TableCell>{result.testName}</TableCell>
-                <TableCell>{result.testDate}</TableCell>
-                <TableCell>{result.result}</TableCell>
-                <TableCell>{result.unit}</TableCell>
-                <TableCell>{result.referenceRange}</TableCell>
-                <TableCell>{result.orderingProvider}</TableCell>
-                <TableCell>{result.laboratory}</TableCell>
-                <TableCell>
-                  <Button size="small" color="error" onClick={() => handleDelete(result.id!)}>
-                    Delete
-                  </Button>
-                </TableCell>
-              </TableRow>
+              <Table.Tr key={result.id}>
+                <Table.Td>{result.testName}</Table.Td>
+                <Table.Td>{result.testDate}</Table.Td>
+                <Table.Td>{result.result}</Table.Td>
+                <Table.Td>{result.unit}</Table.Td>
+                <Table.Td>{result.referenceRange}</Table.Td>
+                <Table.Td>{result.orderingProvider}</Table.Td>
+                <Table.Td>{result.laboratory}</Table.Td>
+                <Table.Td>
+                  <ActionIcon color="red" onClick={() => handleDelete(result.id!)}>
+                    <IconTrash size={16} />
+                  </ActionIcon>
+                </Table.Td>
+              </Table.Tr>
             ))}
             {results.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={8} align="center">
+              <Table.Tr>
+                <Table.Td colSpan={8} ta="center">
                   No lab results found
-                </TableCell>
-              </TableRow>
+                </Table.Td>
+              </Table.Tr>
             )}
-          </TableBody>
+          </Table.Tbody>
         </Table>
-      </TableContainer>
+      </Paper>
 
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Lab Result</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            name="testName"
-            label="Test Name"
-            fullWidth
-            value={formData.testName}
-            onChange={handleInputChange}
-          />
-          <TextField
-            margin="dense"
-            name="testDate"
-            label="Test Date"
-            type="date"
-            fullWidth
-            slotProps={{ inputLabel: { shrink: true } }}
-            value={formData.testDate}
-            onChange={handleInputChange}
-          />
-          <TextField
-            margin="dense"
-            name="result"
-            label="Result"
-            fullWidth
-            value={formData.result}
-            onChange={handleInputChange}
-          />
-          <TextField
-            margin="dense"
-            name="unit"
-            label="Unit"
-            fullWidth
-            value={formData.unit}
-            onChange={handleInputChange}
-          />
-          <TextField
-            margin="dense"
-            name="referenceRange"
-            label="Reference Range"
-            fullWidth
-            value={formData.referenceRange}
-            onChange={handleInputChange}
-          />
-          <TextField
-            margin="dense"
-            name="orderingProvider"
-            label="Ordering Provider"
-            fullWidth
-            value={formData.orderingProvider}
-            onChange={handleInputChange}
-          />
-          <TextField
-            margin="dense"
-            name="laboratory"
-            label="Laboratory"
-            fullWidth
-            value={formData.laboratory}
-            onChange={handleInputChange}
-          />
-          <TextField
-            margin="dense"
-            name="notes"
-            label="Notes"
-            fullWidth
-            multiline
-            rows={3}
-            value={formData.notes}
-            onChange={handleInputChange}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained">Add Result</Button>
-        </DialogActions>
-      </Dialog>
+      <Modal opened={opened} onClose={close} title="Add Lab Result" centered>
+        <TextInput
+          label="Test Name"
+          value={formData.testName}
+          onChange={(e) => handleInputChange('testName', e.target.value)}
+          mb="sm"
+          required
+        />
+        <DateInput
+          label="Test Date"
+          value={formData.testDate ? new Date(formData.testDate) : null}
+          onChange={(date) => handleInputChange('testDate', date ? date.toISOString().split('T')[0] : '')}
+          mb="sm"
+        />
+        <TextInput
+          label="Result"
+          value={formData.result}
+          onChange={(e) => handleInputChange('result', e.target.value)}
+          mb="sm"
+        />
+        <TextInput
+          label="Unit"
+          value={formData.unit}
+          onChange={(e) => handleInputChange('unit', e.target.value)}
+          mb="sm"
+        />
+        <TextInput
+          label="Reference Range"
+          value={formData.referenceRange}
+          onChange={(e) => handleInputChange('referenceRange', e.target.value)}
+          mb="sm"
+        />
+        <TextInput
+          label="Ordering Provider"
+          value={formData.orderingProvider}
+          onChange={(e) => handleInputChange('orderingProvider', e.target.value)}
+          mb="sm"
+        />
+        <TextInput
+          label="Laboratory"
+          value={formData.laboratory}
+          onChange={(e) => handleInputChange('laboratory', e.target.value)}
+          mb="sm"
+        />
+        <TextInput
+          label="Notes"
+          value={formData.notes}
+          onChange={(e) => handleInputChange('notes', e.target.value)}
+          mb="md"
+        />
+        <Group justify="flex-end">
+          <Button variant="default" onClick={close}>Cancel</Button>
+          <Button onClick={handleSubmit}>Add Result</Button>
+        </Group>
+      </Modal>
     </Box>
   );
 };
