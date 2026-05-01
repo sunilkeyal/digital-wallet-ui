@@ -23,7 +23,7 @@ const LeftNav = () => {
         borderRight: '1px solid var(--mantine-color-gray-3)',
         backgroundColor: 'var(--mantine-color-gray-0)',
         overflowY: 'auto',
-        height: '100%',
+        alignSelf: 'stretch',
       }}
     >
       <Box p="md">

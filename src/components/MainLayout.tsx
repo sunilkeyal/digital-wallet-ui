@@ -8,7 +8,7 @@ const MainLayout = () => {
   return (
     <Box style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Header />
-      <Box style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <Box style={{ display: 'flex', flex: 1 }}>
         <LeftNav />
         <Box
           component="main"
