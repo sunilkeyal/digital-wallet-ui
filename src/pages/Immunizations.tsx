@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Box, Text, Paper, Table, Button, Modal, TextInput, Select, Alert, Pagination, Group, ActionIcon } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useDisclosure } from '@mantine/hooks';
-import { IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconPlus, IconTrash, IconArrowUp, IconArrowDown } from '@tabler/icons-react';
 import { immunizationApi } from '../services/api';
 import type { ImmunizationDto, PageResponse } from '../types';
 
@@ -15,6 +15,8 @@ const Immunizations = () => {
   const [opened, { open, close }] = useDisclosure(false);
   const [page, setPage] = useState(1);
   const [size, setSize] = useState(10);
+  const [sortBy, setSortBy] = useState('vaccineName');
+  const [sortDir, setSortDir] = useState('asc');
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [isPaginated, setIsPaginated] = useState(true);
@@ -32,7 +34,7 @@ const Immunizations = () => {
   const fetchImmunizations = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await immunizationApi.getAll(page - 1, size);
+      const response = await immunizationApi.getAll(page - 1, size, sortBy, sortDir);
       const data = response.data;
 
       if (Array.isArray(data)) {
@@ -51,7 +53,7 @@ const Immunizations = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, size]);
+  }, [page, size, sortBy, sortDir]);
 
   useEffect(() => {
     fetchImmunizations();
@@ -100,24 +102,30 @@ const Immunizations = () => {
     setPage(1);
   };
 
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(column);
+      setSortDir('asc');
+    }
+    setPage(1);
+  };
+
+  const getSortIcon = (column: string) => {
+    if (sortBy !== column) return null;
+    return sortDir === 'asc' ? <IconArrowUp size={14} /> : <IconArrowDown size={14} />;
+  };
+
   if (loading) return <Text>Loading...</Text>;
 
   return (
     <Box mt={0} mb={0}>
       <Group justify="space-between" mb="xs">
         <Text size="xl" fw={700}>Immunization History</Text>
-        <Group gap="md">
-          <Select
-            size="sm"
-            value={size === 1000 ? 'ALL' : String(size)}
-            onChange={handleSizeChange}
-            data={PAGE_SIZE_OPTIONS}
-            style={{ width: 120 }}
-          />
-          <Button leftSection={<IconPlus size={16} />} onClick={open}>
-            Add Record
-          </Button>
-        </Group>
+        <Button leftSection={<IconPlus size={16} />} onClick={open}>
+          Add Record
+        </Button>
       </Group>
 
       {error && <Alert color="red" mb="md">{error}</Alert>}
@@ -126,12 +134,42 @@ const Immunizations = () => {
         <Table striped highlightOnHover>
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Vaccine</Table.Th>
-              <Table.Th>Manufacturer</Table.Th>
-              <Table.Th>Lot Number</Table.Th>
-              <Table.Th>Date Administered</Table.Th>
-              <Table.Th>Administered By</Table.Th>
-              <Table.Th>Facility</Table.Th>
+              <Table.Th style={{ cursor: 'pointer' }} onClick={() => handleSort('vaccineName')}>
+                <Group gap={4} justify="space-between">
+                  Vaccine
+                  {getSortIcon('vaccineName')}
+                </Group>
+              </Table.Th>
+              <Table.Th style={{ cursor: 'pointer' }} onClick={() => handleSort('manufacturer')}>
+                <Group gap={4} justify="space-between">
+                  Manufacturer
+                  {getSortIcon('manufacturer')}
+                </Group>
+              </Table.Th>
+              <Table.Th style={{ cursor: 'pointer' }} onClick={() => handleSort('lotNumber')}>
+                <Group gap={4} justify="space-between">
+                  Lot Number
+                  {getSortIcon('lotNumber')}
+                </Group>
+              </Table.Th>
+              <Table.Th style={{ cursor: 'pointer' }} onClick={() => handleSort('administrationDate')}>
+                <Group gap={4} justify="space-between">
+                  Date Administered
+                  {getSortIcon('administrationDate')}
+                </Group>
+              </Table.Th>
+              <Table.Th style={{ cursor: 'pointer' }} onClick={() => handleSort('administeredBy')}>
+                <Group gap={4} justify="space-between">
+                  Administered By
+                  {getSortIcon('administeredBy')}
+                </Group>
+              </Table.Th>
+              <Table.Th style={{ cursor: 'pointer' }} onClick={() => handleSort('facilityName')}>
+                <Group gap={4} justify="space-between">
+                  Facility
+                  {getSortIcon('facilityName')}
+                </Group>
+              </Table.Th>
               <Table.Th>Actions</Table.Th>
             </Table.Tr>
           </Table.Thead>
@@ -160,11 +198,44 @@ const Immunizations = () => {
             )}
           </Table.Tbody>
         </Table>
-        {isPaginated && totalPages > 1 && (
-          <Group justify="center" p="md">
-            <Pagination value={page} onChange={handlePageChange} total={totalPages} />
+        <Group justify="space-between" p="md" style={{ borderTop: '1px solid #eee' }}>
+          <Group gap="xs">
+            <Text size="sm" c="dimmed">Rows per page:</Text>
+            <Select
+              size="xs"
+              value={size === 1000 ? 'ALL' : String(size)}
+              onChange={handleSizeChange}
+              data={PAGE_SIZE_OPTIONS}
+              style={{ width: 70 }}
+            />
           </Group>
-        )}
+          {isPaginated && (
+            <>
+              <Text size="sm" c="dimmed">
+                {size === 1000
+                  ? `Showing all ${totalElements} records`
+                  : `Showing ${(page - 1) * size + 1}-${Math.min(page * size, totalElements)} of ${totalElements} records`}
+              </Text>
+              {totalPages > 1 && (
+                <Group gap="xs">
+                  <Pagination
+                    value={page}
+                    onChange={handlePageChange}
+                    total={totalPages}
+                    boundaries={1}
+                    siblings={1}
+                    withEdges
+                  />
+                </Group>
+              )}
+            </>
+          )}
+          {!isPaginated && (
+            <Text size="sm" c="dimmed">
+              Showing all {totalElements} records
+            </Text>
+          )}
+        </Group>
       </Paper>
 
       <Modal opened={opened} onClose={close} title="Add Immunization Record" centered>

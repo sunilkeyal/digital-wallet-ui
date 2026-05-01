@@ -20,41 +20,41 @@ api.interceptors.request.use((config) => {
 });
 
 export const immunizationApi = {
-  getAll: (page = 0, size = 10): Promise<{ data: PageResponse<ImmunizationDto> | ImmunizationDto[] }> => 
-    api.get('/immunizations', { params: { page, size } }),
-  getById: (id: string): Promise<{ data: ImmunizationDto }> => 
+  getAll: (page = 0, size = 10, sortBy = 'vaccineName', sortDir = 'asc'): Promise<{ data: PageResponse<ImmunizationDto> | ImmunizationDto[] }> =>
+    api.get('/immunizations', { params: { page, size, sortBy, sortDir } }),
+  getById: (id: string): Promise<{ data: ImmunizationDto }> =>
     api.get(`/immunizations/${id}`),
-  create: (data: ImmunizationDto): Promise<{ data: ImmunizationDto }> => 
+  create: (data: ImmunizationDto): Promise<{ data: ImmunizationDto }> =>
     api.post('/immunizations', data),
-  update: (id: string, data: ImmunizationDto): Promise<{ data: ImmunizationDto }> => 
+  update: (id: string, data: ImmunizationDto): Promise<{ data: ImmunizationDto }> =>
     api.put(`/immunizations/${id}`, data),
-  delete: (id: string): Promise<{ data: void }> => 
+  delete: (id: string): Promise<{ data: void }> =>
     api.delete(`/immunizations/${id}`),
 };
 
 export const insuranceCardApi = {
-  getAll: (): Promise<{ data: InsuranceCardDto[] }> => 
-    api.get('/insurance-cards'),
-  getById: (id: string): Promise<{ data: InsuranceCardDto }> => 
+  getAll: (page = 0, size = 10, sortBy = 'provider', sortDir = 'asc'): Promise<{ data: PageResponse<InsuranceCardDto> | InsuranceCardDto[] }> =>
+    api.get('/insurance-cards', { params: { page, size, sortBy, sortDir } }),
+  getById: (id: string): Promise<{ data: InsuranceCardDto }> =>
     api.get(`/insurance-cards/${id}`),
-  create: (data: InsuranceCardDto): Promise<{ data: InsuranceCardDto }> => 
+  create: (data: InsuranceCardDto): Promise<{ data: InsuranceCardDto }> =>
     api.post('/insurance-cards', data),
-  update: (id: string, data: InsuranceCardDto): Promise<{ data: InsuranceCardDto }> => 
+  update: (id: string, data: InsuranceCardDto): Promise<{ data: InsuranceCardDto }> =>
     api.put(`/insurance-cards/${id}`, data),
-  delete: (id: string): Promise<{ data: void }> => 
+  delete: (id: string): Promise<{ data: void }> =>
     api.delete(`/insurance-cards/${id}`),
 };
 
 export const labResultApi = {
-  getAll: (): Promise<{ data: LabResultDto[] }> => 
-    api.get('/lab-results'),
-  getById: (id: string): Promise<{ data: LabResultDto }> => 
+  getAll: (page = 0, size = 10, sortBy = 'testDate', sortDir = 'desc'): Promise<{ data: PageResponse<LabResultDto> | LabResultDto[] }> =>
+    api.get('/lab-results', { params: { page, size, sortBy, sortDir } }),
+  getById: (id: string): Promise<{ data: LabResultDto }> =>
     api.get(`/lab-results/${id}`),
-  create: (data: LabResultDto): Promise<{ data: LabResultDto }> => 
+  create: (data: LabResultDto): Promise<{ data: LabResultDto }> =>
     api.post('/lab-results', data),
-  update: (id: string, data: LabResultDto): Promise<{ data: LabResultDto }> => 
+  update: (id: string, data: LabResultDto): Promise<{ data: LabResultDto }> =>
     api.put(`/lab-results/${id}`, data),
-  delete: (id: string): Promise<{ data: void }> => 
+  delete: (id: string): Promise<{ data: void }> =>
     api.delete(`/lab-results/${id}`),
 };
 
