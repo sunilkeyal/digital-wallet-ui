@@ -69,6 +69,8 @@ export const authApi = {
     api.post('/admin/users', data),
   deleteUser: (id: string): Promise<{ data: void }> => 
     api.delete(`/admin/users/${id}`),
+  seedData: (userId: string): Promise<{ data: { message: string } }> =>
+    api.post('/admin/seed', { userId }),
 };
 
 export default api;
