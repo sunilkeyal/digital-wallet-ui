@@ -65,7 +65,7 @@ export const authApi = {
     api.get('/auth/me'),
   getAllUsers: (): Promise<{ data: User[] }> => 
     api.get('/admin/users'),
-  createUser: (data: { email: string; password: string; firstName?: string; lastName?: string; roles: string }): Promise<{ data: User }> => 
+  createUser: (data: { email: string; password: string; firstName?: string; lastName?: string; roles: string[] }): Promise<{ data: User }> => 
     api.post('/admin/users', data),
   deleteUser: (id: string): Promise<{ data: void }> => 
     api.delete(`/admin/users/${id}`),

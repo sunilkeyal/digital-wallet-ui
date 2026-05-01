@@ -29,7 +29,7 @@ const InsuranceCards = () => {
     try {
       const response = await insuranceCardApi.getAll();
       setCards(response.data);
-    } catch (err) {
+    } catch {
       setError('Failed to load insurance cards');
     } finally {
       setLoading(false);
@@ -54,7 +54,7 @@ const InsuranceCards = () => {
         relationship: '',
       });
       fetchCards();
-    } catch (err) {
+    } catch {
       setError('Failed to add insurance card');
     }
   };
@@ -63,7 +63,7 @@ const InsuranceCards = () => {
     try {
       await insuranceCardApi.delete(id);
       fetchCards();
-    } catch (err) {
+    } catch {
       setError('Failed to delete insurance card');
     }
   };
@@ -142,14 +142,14 @@ const InsuranceCards = () => {
         />
         <DateInput
           label="Effective Date"
-          value={formData.effectiveDate ? new Date(formData.effectiveDate) : null}
-          onChange={(date) => handleInputChange('effectiveDate', date ? date.toISOString().split('T')[0] : '')}
+          value={formData.effectiveDate || undefined}
+          onChange={(date) => handleInputChange('effectiveDate', date ?? '')}
           mb="sm"
         />
         <DateInput
           label="Expiry Date"
-          value={formData.expiryDate ? new Date(formData.expiryDate) : null}
-          onChange={(date) => handleInputChange('expiryDate', date ? date.toISOString().split('T')[0] : '')}
+          value={formData.expiryDate || undefined}
+          onChange={(date) => handleInputChange('expiryDate', date ?? '')}
           mb="sm"
         />
         <TextInput

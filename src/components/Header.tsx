@@ -1,18 +1,12 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { Group, Text, Button } from '@mantine/core';
+import { Link } from 'react-router-dom';
+import { Group, Text, Button, Box } from '@mantine/core';
 import { useAuth } from '../context/AuthContext';
 
 const Header = () => {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   return (
-    <div style={{ backgroundColor: 'var(--mantine-color-blue-7)', padding: '12px 24px' }}>
+    <Box component="header" style={{ backgroundColor: 'var(--mantine-color-blue-7)', padding: '12px 24px' }}>
       <Group justify="space-between" align="center" style={{ maxWidth: '100%' }}>
         <Group gap="sm">
           <img
@@ -34,12 +28,12 @@ const Header = () => {
           </Text>
         </Group>
         {user && (
-          <Button variant="subtle" c="white" onClick={handleLogout}>
+          <Button variant="subtle" c="white" onClick={logout}>
             Logout ({user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user.email})
           </Button>
         )}
       </Group>
-    </div>
+    </Box>
   );
 };
 

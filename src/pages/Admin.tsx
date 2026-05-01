@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Box, Text, Paper, Table, Button, Modal, TextInput, Select, Alert, ActionIcon, Group } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconPlus, IconTrash } from '@tabler/icons-react';
@@ -18,7 +18,7 @@ const Admin = () => {
     roles: 'ROLE_USER' as string,
   });
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
@@ -29,12 +29,11 @@ const Admin = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchUsers();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchUsers]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value });

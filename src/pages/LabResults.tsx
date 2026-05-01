@@ -30,7 +30,7 @@ const LabResults = () => {
     try {
       const response = await labResultApi.getAll();
       setResults(response.data);
-    } catch (err) {
+    } catch {
       setError('Failed to load lab results');
     } finally {
       setLoading(false);
@@ -56,7 +56,7 @@ const LabResults = () => {
         notes: '',
       });
       fetchResults();
-    } catch (err) {
+    } catch {
       setError('Failed to add lab result');
     }
   };
@@ -65,7 +65,7 @@ const LabResults = () => {
     try {
       await labResultApi.delete(id);
       fetchResults();
-    } catch (err) {
+    } catch {
       setError('Failed to delete lab result');
     }
   };
@@ -135,8 +135,8 @@ const LabResults = () => {
         />
         <DateInput
           label="Test Date"
-          value={formData.testDate ? new Date(formData.testDate) : null}
-          onChange={(date) => handleInputChange('testDate', date ? date.toISOString().split('T')[0] : '')}
+          value={formData.testDate || undefined}
+          onChange={(date) => handleInputChange('testDate', date ?? '')}
           mb="sm"
         />
         <TextInput

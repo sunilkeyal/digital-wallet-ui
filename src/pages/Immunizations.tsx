@@ -1,4 +1,4 @@
-import { useState, useEffect, type ChangeEvent, type FormEvent } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Box, Text, Paper, Table, Button, Modal, TextInput, Select, Alert, Pagination, Group, ActionIcon } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useDisclosure } from '@mantine/hooks';
@@ -29,12 +29,7 @@ const Immunizations = () => {
     notes: '',
   });
 
-  useEffect(() => {
-    fetchImmunizations();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, size]);
-
-  const fetchImmunizations = async () => {
+  const fetchImmunizations = useCallback(async () => {
     try {
       setLoading(true);
       const response = await immunizationApi.getAll(page - 1, size);
@@ -51,12 +46,16 @@ const Immunizations = () => {
         setTotalPages(pageData.totalPages || 0);
         setIsPaginated(true);
       }
-    } catch (err) {
+    } catch {
       setError('Failed to load immunizations');
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, size]);
+
+  useEffect(() => {
+    fetchImmunizations();
+  }, [fetchImmunizations]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value });
@@ -77,7 +76,7 @@ const Immunizations = () => {
         notes: '',
       });
       fetchImmunizations();
-    } catch (err) {
+    } catch {
       setError('Failed to add immunization');
     }
   };
@@ -86,7 +85,7 @@ const Immunizations = () => {
     try {
       await immunizationApi.delete(id);
       fetchImmunizations();
-    } catch (err) {
+    } catch {
       setError('Failed to delete immunization');
     }
   };
@@ -190,8 +189,8 @@ const Immunizations = () => {
         />
         <DateInput
           label="Date Administered"
-          value={formData.administrationDate ? new Date(formData.administrationDate) : null}
-          onChange={(date) => handleInputChange('administrationDate', date ? date.toISOString().split('T')[0] : '')}
+          value={formData.administrationDate || undefined}
+          onChange={(date) => handleInputChange('administrationDate', date ?? '')}
           mb="sm"
         />
         <TextInput

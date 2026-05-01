@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Box, Text, TextInput, PasswordInput, Button, Paper, Alert, Center } from '@mantine/core';
 import { useAuth } from '../context/AuthContext';
 import type { LoginRequest } from '../types';
@@ -12,7 +11,6 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
-  const navigate = useNavigate();
 
   const handleInputChange = (field: string, value: string) => {
     setCredentials({ ...credentials, [field]: value });
@@ -25,7 +23,6 @@ const Login = () => {
 
     try {
       await login(credentials);
-      navigate('/dashboard');
     } catch {
       setError('Invalid email or password');
     } finally {

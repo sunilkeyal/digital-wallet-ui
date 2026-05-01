@@ -1,3 +1,4 @@
+import { type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import MainLayout from './components/MainLayout';
@@ -8,14 +9,14 @@ import InsuranceCards from './pages/InsuranceCards';
 import LabResults from './pages/LabResults';
 import Admin from './pages/Admin';
 
-const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
+const PrivateRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
   
   if (loading) return <div>Loading...</div>;
   return user ? <>{children}</> : <Navigate to="/login" />;
 };
 
-const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+const AdminRoute = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   return user?.roles?.includes('ROLE_ADMIN') ? <>{children}</> : <Navigate to="/dashboard" />;
 };
