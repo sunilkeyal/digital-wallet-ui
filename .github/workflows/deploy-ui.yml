@@ -36,6 +36,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Azure login (OIDC)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Discover backend URL
+        id: backend
+        run: |
+          APP_NAME=$(az webapp list \
+            --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
+            --query "[0].name" \
+            -o tsv)
+          if [ -z "$APP_NAME" ]; then
+            echo "ERROR: No App Service found in ${{ env.AZURE_RESOURCE_GROUP }}"
+            exit 1
+          fi
+          HOST=$(az webapp show --name "$APP_NAME" --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" --query defaultHostName -o tsv)
+          echo "url=https://${HOST}/api" >> $GITHUB_OUTPUT
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -51,13 +72,8 @@ jobs:
 
       - name: Build
         run: pnpm build
-
-      - name: Azure login (OIDC)
-        uses: azure/login@v3
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        env:
+          VITE_API_BASE_URL: ${{ steps.backend.outputs.url }}
 
       - name: Discover Static Web App
         id: discover
