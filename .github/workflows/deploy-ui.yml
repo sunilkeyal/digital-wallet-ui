@@ -72,6 +72,9 @@ jobs:
           fi
           echo "app_name=$APP_NAME" >> $GITHUB_OUTPUT
 
+      - name: Install Static Web Apps CLI extension
+        run: az extension add --name staticwebapp --yes
+
       - name: Deploy to Static Web App
         run: |
           az staticwebapp deploy \
