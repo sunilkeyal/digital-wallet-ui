@@ -72,13 +72,15 @@ jobs:
           fi
           echo "app_name=$APP_NAME" >> $GITHUB_OUTPUT
 
-      - name: Install Static Web Apps CLI extension
-        run: az extension add --name staticwebapp --yes
+      - name: Fetch deployment token
+        id: token
+        run: |
+          TOKEN=$(az staticwebapp secrets list \
+            --name "${{ steps.discover.outputs.app_name }}" \
+            --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
+            --query "properties.apiKey" \
+            -o tsv)
+          echo "deployment_token=$TOKEN" >> $GITHUB_OUTPUT
 
       - name: Deploy to Static Web App
-        run: |
-          az staticwebapp deploy \
-            --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
-            --name "${{ steps.discover.outputs.app_name }}" \
-            --source-dir dist \
-            --skip-app-build
+        run: npx @azure/static-web-apps-cli deploy dist --deployment-token "${{ steps.token.outputs.deployment_token }}"
