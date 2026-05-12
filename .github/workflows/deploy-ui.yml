@@ -89,4 +89,6 @@ jobs:
           azure_static_web_apps_api_token: ${{ steps.token.outputs.deployment_token }}
           skip_app_build: true
           skip_api_build: true
+          app_location: /
+          output_location: dist
           action: upload
