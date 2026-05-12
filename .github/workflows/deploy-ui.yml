@@ -72,24 +72,22 @@ jobs:
           fi
           echo "app_name=$APP_NAME" >> $GITHUB_OUTPUT
 
-      - name: Get subscription ID
-        id: sub
-        run: echo "subscription_id=$(az account show --query id -o tsv)" >> $GITHUB_OUTPUT
-
-      - name: Deploy via REST API
+      - name: Fetch deployment token
+        id: token
         run: |
-          APP_NAME="${{ steps.discover.outputs.app_name }}"
-          SUBSCRIPTION_ID="${{ steps.sub.outputs.subscription_id }}"
-          RG="${{ env.AZURE_RESOURCE_GROUP }}"
+          TOKEN=$(az staticwebapp secrets list \
+            --name "${{ steps.discover.outputs.app_name }}" \
+            --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
+            --query "properties.apiKey" \
+            -o tsv)
+          echo "::add-mask::$TOKEN"
+          echo "deployment_token=$TOKEN" >> $GITHUB_OUTPUT
 
-          cd dist
-          zip -r /tmp/deploy.zip .
-          cd ..
-
-          TOKEN=$(az account get-access-token --resource https://management.azure.com --query accessToken -o tsv)
-
-          curl -X POST \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Content-Type: application/octet-stream" \
-            --data-binary @/tmp/deploy.zip \
-            "https://management.azure.com/subscriptions/${SUBSCRIPTION_ID}/resourceGroups/${RG}/providers/Microsoft.Web/staticSites/${APP_NAME}/zipdeploy?api-version=2022-03-01"
+      - name: Deploy to Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.token.outputs.deployment_token }}
+          skip_app_build: true
+          skip_api_build: true
+          app_location: dist
+          action: upload
