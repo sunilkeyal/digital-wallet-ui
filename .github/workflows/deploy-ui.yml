@@ -1,0 +1,81 @@
+name: Build and Deploy UI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'vite.config.ts'
+      - 'tsconfig.json'
+      - '.github/workflows/**'
+      - 'index.html'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'vite.config.ts'
+      - 'tsconfig.json'
+      - '.github/workflows/**'
+      - 'index.html'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP || 'digital-wallet-rg' }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Discover Static Web App
+        id: discover
+        run: |
+          APP_NAME=$(az staticwebapp list \
+            --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
+            --query "[0].name" \
+            -o tsv)
+          if [ -z "$APP_NAME" ]; then
+            echo "ERROR: No Static Web App found in ${{ env.AZURE_RESOURCE_GROUP }}"
+            exit 1
+          fi
+          echo "app_name=$APP_NAME" >> $GITHUB_OUTPUT
+
+      - name: Deploy to Static Web App
+        run: |
+          az staticwebapp deploy \
+            --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
+            --name "${{ steps.discover.outputs.app_name }}" \
+            --source-dir dist \
+            --skip-app-build
