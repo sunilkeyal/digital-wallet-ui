@@ -80,7 +80,13 @@ jobs:
             --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
             --query "properties.apiKey" \
             -o tsv)
+          echo "::add-mask::$TOKEN"
           echo "deployment_token=$TOKEN" >> $GITHUB_OUTPUT
 
       - name: Deploy to Static Web App
-        run: npx @azure/static-web-apps-cli deploy dist --deployment-token "${{ steps.token.outputs.deployment_token }}"
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.token.outputs.deployment_token }}
+          skip_app_build: true
+          skip_api_build: true
+          action: upload
