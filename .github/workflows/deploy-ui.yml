@@ -1,109 +1,87 @@
 name: Build and Deploy UI
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'src/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'vite.config.ts'
-      - 'tsconfig.json'
-      - '.github/workflows/**'
-      - 'index.html'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'src/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'vite.config.ts'
-      - 'tsconfig.json'
-      - '.github/workflows/**'
-      - 'index.html'
   workflow_dispatch:
 
 permissions:
-  id-token: write
   contents: read
 
 env:
-  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP || 'digital-wallet-rg' }}
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
-  build-and-deploy:
+  deploy-ui:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Azure login (OIDC)
-        uses: azure/login@v3
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Discover backend URL
-        id: backend
+      - name: Set OCIR image name
+        id: set-image
         run: |
-          APP_NAME=$(az webapp list \
-            --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
-            --query "[0].name" \
-            -o tsv)
-          if [ -z "$APP_NAME" ]; then
-            echo "ERROR: No App Service found in ${{ env.AZURE_RESOURCE_GROUP }}"
-            exit 1
-          fi
-          HOST=$(az webapp show --name "$APP_NAME" --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" --query defaultHostName -o tsv)
-          echo "url=https://${HOST}/api" >> $GITHUB_OUTPUT
+          OCIR_REGION="${{ vars.OCI_REGION || 'us-ashburn-1' }}"
+          OCIR_NS="${{ vars.OCI_OBJECT_STORAGE_NAMESPACE }}"
+          IMG="$OCIR_REGION.ocir.io/$OCIR_NS/digital-wallet-frontend"
+          echo "image=$IMG" >> $GITHUB_OUTPUT
+          echo "FRONTEND_IMAGE=$IMG" >> $GITHUB_ENV
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Log in to OCI Container Registry
+        run: |
+          OCIR_HOST="${{ vars.OCI_REGION || 'us-ashburn-1' }}.ocir.io"
+          echo "${{ secrets.OCI_AUTH_TOKEN }}" | docker login \
+            "$OCIR_HOST" \
+            --username "${{ secrets.OCI_DOCKER_USERNAME }}" \
+            --password-stdin
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
         with:
-          node-version: '22'
+          context: digital-wallet-ui
+          push: true
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:${{ env.IMAGE_TAG }}
+            ${{ env.FRONTEND_IMAGE }}:latest
+          build-args: |
+            VITE_API_BASE_URL=/api
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: latest
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build
-        run: pnpm build
+      - name: Get VM and LB IPs from Terraform
+        id: tf
+        working-directory: digital-wallet-iac
+        run: |
+          terraform init
+          echo "vm_public_ip=$(terraform output -raw vm_public_ip)" >> $GITHUB_OUTPUT
+          echo "lb_ip=$(terraform output -raw load_balancer_public_ip)" >> $GITHUB_OUTPUT
         env:
-          VITE_API_BASE_URL: ${{ steps.backend.outputs.url }}
+          TF_TOKEN_app_terraform_io: ${{ secrets.TFE_TOKEN }}
 
-      - name: Discover Static Web App
-        id: discover
+      - name: Set up SSH
         run: |
-          APP_NAME=$(az staticwebapp list \
-            --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
-            --query "[0].name" \
-            -o tsv)
-          if [ -z "$APP_NAME" ]; then
-            echo "ERROR: No Static Web App found in ${{ env.AZURE_RESOURCE_GROUP }}"
-            exit 1
-          fi
-          echo "app_name=$APP_NAME" >> $GITHUB_OUTPUT
+          mkdir -p ~/.ssh
+          echo "${{ secrets.OCI_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ steps.tf.outputs.vm_public_ip }} >> ~/.ssh/known_hosts
 
-      - name: Fetch deployment token
-        id: token
+      - name: Update frontend image on VM
         run: |
-          TOKEN=$(az staticwebapp secrets list \
-            --name "${{ steps.discover.outputs.app_name }}" \
-            --resource-group "${{ env.AZURE_RESOURCE_GROUP }}" \
-            --query "properties.apiKey" \
-            -o tsv)
-          echo "::add-mask::$TOKEN"
-          echo "deployment_token=$TOKEN" >> $GITHUB_OUTPUT
+          IMAGE="${{ steps.set-image.outputs.image }}:${{ env.IMAGE_TAG }}"
+          ssh opc@${{ steps.tf.outputs.vm_public_ip }} "
+            grep -q '^FRONTEND_IMAGE=' /opt/digital-wallet/.env && \
+              sudo sed -i 's|^FRONTEND_IMAGE=.*|FRONTEND_IMAGE=$IMAGE|' /opt/digital-wallet/.env || \
+              echo 'FRONTEND_IMAGE=$IMAGE' | sudo tee -a /opt/digital-wallet/.env
+          "
 
-      - name: Deploy to Static Web App
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          azure_static_web_apps_api_token: ${{ steps.token.outputs.deployment_token }}
-          skip_app_build: true
-          skip_api_build: true
-          app_location: dist
-          action: upload
+      - name: Deploy on VM
+        run: |
+          ssh opc@${{ steps.tf.outputs.vm_public_ip }} \
+            "OCI_DOCKER_USERNAME='${{ secrets.OCI_DOCKER_USERNAME }}' \
+             OCI_AUTH_TOKEN='${{ secrets.OCI_AUTH_TOKEN }}' \
+             sudo -E /opt/digital-wallet/deploy.sh"
+
+      - name: Verify frontend
+        run: |
+          sleep 10
+          curl -s -o /dev/null -w "Frontend: %{http_code}\n" "http://${{ steps.tf.outputs.lb_ip }}/"
