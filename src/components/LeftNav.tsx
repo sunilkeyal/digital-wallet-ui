@@ -2,7 +2,11 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Box } from '@mantine/core';
 
-const LeftNav = () => {
+interface NavItemsProps {
+  onNavigate?: () => void;
+}
+
+export const NavItems = ({ onNavigate }: NavItemsProps) => {
   const { user } = useAuth();
 
   const getNavLinkStyle = (isActive: boolean) => ({
@@ -10,14 +14,48 @@ const LeftNav = () => {
     padding: '10px 15px',
     marginBottom: '5px',
     textDecoration: 'none',
+    borderRadius: '4px',
     color: isActive ? 'var(--mantine-color-blue-7)' : 'var(--mantine-color-gray-7)',
     backgroundColor: isActive ? 'var(--mantine-color-blue-0)' : 'transparent',
-    borderRadius: '4px',
     fontWeight: isActive ? 600 : 400,
   });
 
+  const links = [
+    { to: '/dashboard', label: 'Dashboard' },
+    { to: '/immunizations', label: 'Immunizations' },
+    { to: '/insurance-cards', label: 'Insurance Cards' },
+    { to: '/lab-results', label: 'Lab Results' },
+  ];
+
+  return (
+    <>
+      {links.map(link => (
+        <NavLink
+          key={link.to}
+          to={link.to}
+          onClick={onNavigate}
+          style={({ isActive }) => getNavLinkStyle(isActive)}
+        >
+          {link.label}
+        </NavLink>
+      ))}
+      {user?.roles?.includes('ROLE_ADMIN') && (
+        <NavLink
+          to="/admin"
+          onClick={onNavigate}
+          style={({ isActive }) => getNavLinkStyle(isActive)}
+        >
+          Admin
+        </NavLink>
+      )}
+    </>
+  );
+};
+
+const LeftNav = () => {
   return (
     <Box
+      visibleFrom="sm"
       style={{
         width: 240,
         borderRight: '1px solid var(--mantine-color-gray-3)',
@@ -27,23 +65,7 @@ const LeftNav = () => {
       }}
     >
       <Box p="md">
-        <NavLink to="/dashboard" style={({ isActive }) => getNavLinkStyle(isActive)}>
-          Dashboard
-        </NavLink>
-        <NavLink to="/immunizations" style={({ isActive }) => getNavLinkStyle(isActive)}>
-          Immunizations
-        </NavLink>
-        <NavLink to="/insurance-cards" style={({ isActive }) => getNavLinkStyle(isActive)}>
-          Insurance Cards
-        </NavLink>
-        <NavLink to="/lab-results" style={({ isActive }) => getNavLinkStyle(isActive)}>
-          Lab Results
-        </NavLink>
-        {user?.roles?.includes('ROLE_ADMIN') && (
-          <NavLink to="/admin" style={({ isActive }) => getNavLinkStyle(isActive)}>
-            Admin
-          </NavLink>
-        )}
+        <NavItems />
       </Box>
     </Box>
   );

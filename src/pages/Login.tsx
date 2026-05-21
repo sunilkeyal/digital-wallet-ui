@@ -32,7 +32,7 @@ const Login = () => {
 
   return (
     <Center style={{ minHeight: '100vh', backgroundColor: 'var(--mantine-color-gray-1)' }}>
-      <Paper p="xl" radius="md" style={{ maxWidth: 400, width: '100%' }}>
+      <Paper p={{ base: 'md', sm: 'xl' }} radius="md" style={{ maxWidth: 400, width: '100%', margin: '16px' }}>
         <Text size="xl" fw={700} ta="center" mb="md" c="blue.7">
           Digital Wallet
         </Text>

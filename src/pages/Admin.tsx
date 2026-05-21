@@ -115,7 +115,7 @@ const Admin = () => {
           {error && <Alert color="red" mb="md">{error}</Alert>}
 
           {loading ? <Text>Loading...</Text> : (
-            <Paper radius="md">
+            <Paper radius="md" style={{ overflowX: 'auto' }}>
               <Table striped highlightOnHover>
                 <Table.Thead>
                   <Table.Tr>

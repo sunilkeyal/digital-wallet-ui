@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Box, Text, Paper, Table, Button, Modal, TextInput, Alert, Pagination, Select, ActionIcon, Group } from '@mantine/core';
+import { Box, Text, Paper, Table, Button, Modal, TextInput, Alert, Pagination, Select, Stack, ActionIcon, Group } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
 import { useDisclosure } from '@mantine/hooks';
 import { IconPlus, IconTrash, IconArrowUp, IconArrowDown } from '@tabler/icons-react';
@@ -128,7 +128,7 @@ const InsuranceCards = () => {
 
       {error && <Alert color="red" mb="md">{error}</Alert>}
 
-      <Paper radius="md">
+      <Paper radius="md" style={{ overflowX: 'auto' }}>
         <Table striped highlightOnHover>
           <Table.Thead>
             <Table.Tr>
@@ -189,26 +189,26 @@ const InsuranceCards = () => {
             )}
           </Table.Tbody>
         </Table>
-        <Group justify="space-between" p="md" style={{ borderTop: '1px solid #eee' }}>
-          <Group gap="xs">
-            <Text size="sm" c="dimmed">Rows per page:</Text>
-            <Select
-              size="xs"
-              value={size === 1000 ? 'ALL' : String(size)}
-              onChange={handleSizeChange}
-              data={PAGE_SIZE_OPTIONS}
-              style={{ width: 70 }}
-            />
-          </Group>
-          {isPaginated && (
-            <>
-              <Text size="sm" c="dimmed">
-                {size === 1000
-                  ? `Showing all ${totalElements} records`
-                  : `Showing ${(page - 1) * size + 1}-${Math.min(page * size, totalElements)} of ${totalElements} records`}
-              </Text>
-              {totalPages > 1 && (
-                <Group gap="xs">
+        <Box p="md" style={{ borderTop: '1px solid #eee' }}>
+          <Stack gap="xs" align="center">
+            <Group gap="xs">
+              <Text size="sm" c="dimmed">Rows per page:</Text>
+              <Select
+                size="xs"
+                value={size === 1000 ? 'ALL' : String(size)}
+                onChange={handleSizeChange}
+                data={PAGE_SIZE_OPTIONS}
+                style={{ width: 70 }}
+              />
+            </Group>
+            {isPaginated && (
+              <Stack gap="xs" align="center">
+                <Text size="sm" c="dimmed">
+                  {size === 1000
+                    ? `Showing all ${totalElements} records`
+                    : `Showing ${(page - 1) * size + 1}-${Math.min(page * size, totalElements)} of ${totalElements} records`}
+                </Text>
+                {totalPages > 1 && (
                   <Pagination
                     value={page}
                     onChange={handlePageChange}
@@ -217,16 +217,16 @@ const InsuranceCards = () => {
                     siblings={1}
                     withEdges
                   />
-                </Group>
-              )}
-            </>
-          )}
-          {!isPaginated && (
-            <Text size="sm" c="dimmed">
-              Showing all {totalElements} records
-            </Text>
-          )}
-        </Group>
+                )}
+              </Stack>
+            )}
+            {!isPaginated && (
+              <Text size="sm" c="dimmed">
+                Showing all {totalElements} records
+              </Text>
+            )}
+          </Stack>
+        </Box>
       </Paper>
 
       <Modal opened={opened} onClose={close} title="Add Insurance Card" centered>

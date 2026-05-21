@@ -1,14 +1,20 @@
 import { Link } from 'react-router-dom';
-import { Group, Text, Button, Box } from '@mantine/core';
+import { Group, Text, Button, Box, Burger } from '@mantine/core';
 import { useAuth } from '../context/AuthContext';
 
-const Header = () => {
+interface HeaderProps {
+  opened: boolean;
+  onToggle: () => void;
+}
+
+const Header = ({ opened, onToggle }: HeaderProps) => {
   const { user, logout } = useAuth();
 
   return (
-    <Box component="header" style={{ backgroundColor: 'var(--mantine-color-blue-7)', padding: '12px 24px' }}>
+    <Box component="header" style={{ backgroundColor: 'var(--mantine-color-blue-7)', padding: '12px 16px' }}>
       <Group justify="space-between" align="center" style={{ maxWidth: '100%' }}>
         <Group gap="sm">
+          {user && <Burger opened={opened} onClick={onToggle} color="white" hiddenFrom="sm" />}
           <img
             src="/logo.svg"
             alt="Digital Wallet Logo"
@@ -29,7 +35,12 @@ const Header = () => {
         </Group>
         {user && (
           <Button variant="subtle" c="white" onClick={logout}>
-            Logout ({user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user.email})
+            <Box component="span" visibleFrom="sm">
+              Logout ({user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user.email})
+            </Box>
+            <Box component="span" hiddenFrom="sm">
+              Logout
+            </Box>
           </Button>
         )}
       </Group>
