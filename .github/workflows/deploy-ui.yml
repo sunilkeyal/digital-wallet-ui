@@ -15,13 +15,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout iac repo for Terraform state
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.repository_owner }}/digital-wallet-iac
-          path: digital-wallet-iac
-          token: ${{ secrets.GH_PAT }}
-
       - name: Set OCIR image name
         id: set-image
         run: |
@@ -55,20 +48,36 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Get VM and LB IPs from Terraform
+      - name: Get VM and LB IPs from Terraform state
         id: tf
-        working-directory: digital-wallet-iac
-        run: |
-          terraform init
-          echo "vm_public_ip=$(terraform output -raw vm_public_ip)" >> $GITHUB_OUTPUT
-          echo "lb_ip=$(terraform output -raw load_balancer_public_ip)" >> $GITHUB_OUTPUT
         env:
-          TF_TOKEN_app_terraform_io: ${{ secrets.TFE_TOKEN }}
+          OCI_PRIVATE_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
+        run: |
+          mkdir -p $HOME/.oci
+          cat > $HOME/.oci/config << OCIEOF
+          [DEFAULT]
+          user=${{ secrets.OCI_USER_OCID }}
+          fingerprint=${{ secrets.OCI_FINGERPRINT }}
+          tenancy=${{ secrets.OCI_TENANCY_OCID }}
+          region=${{ vars.OCI_REGION || 'us-ashburn-1' }}
+          key_file=$HOME/.oci/oci_api_key.pem
+          OCIEOF
+          echo "$OCI_PRIVATE_KEY" > $HOME/.oci/oci_api_key.pem
+          chmod 600 $HOME/.oci/oci_api_key.pem
+          pip install -q oci-cli
+
+          oci os object get --bucket-name digital-wallet-tfstate \
+            --name terraform.tfstate --file terraform.tfstate 2>/dev/null || echo "No state yet"
+
+          echo "vm_public_ip=$(jq -r '.outputs.vm_public_ip.value // empty' terraform.tfstate)" >> $GITHUB_OUTPUT
+          echo "lb_ip=$(jq -r '.outputs.load_balancer_public_ip.value // empty' terraform.tfstate)" >> $GITHUB_OUTPUT
 
       - name: Set up SSH
+        env:
+          OCI_SSH_PRIVATE_KEY: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.OCI_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          echo "$OCI_SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ steps.tf.outputs.vm_public_ip }} >> ~/.ssh/known_hosts
 
