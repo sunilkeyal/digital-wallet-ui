@@ -1,103 +1,13 @@
-name: Build and Deploy UI
+name: Build and Deploy UI to Render
 
 on:
   workflow_dispatch:
 
-permissions:
-  contents: read
-
-env:
-  IMAGE_TAG: ${{ github.sha }}
-
 jobs:
-  deploy-ui:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set OCIR image name
-        id: set-image
-        run: |
-          OCIR_REGION="${{ vars.OCI_REGION || 'us-ashburn-1' }}"
-          OCIR_NS="${{ vars.OCI_OBJECT_STORAGE_NAMESPACE }}"
-          IMG="$OCIR_REGION.ocir.io/$OCIR_NS/digital-wallet-frontend"
-          echo "image=$IMG" >> $GITHUB_OUTPUT
-          echo "FRONTEND_IMAGE=$IMG" >> $GITHUB_ENV
-
-      - name: Log in to OCI Container Registry
-        run: |
-          OCIR_HOST="${{ vars.OCI_REGION || 'us-ashburn-1' }}.ocir.io"
-          echo "${{ secrets.OCI_AUTH_TOKEN }}" | docker login \
-            "$OCIR_HOST" \
-            --username "${{ secrets.OCI_DOCKER_USERNAME }}" \
-            --password-stdin
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push frontend image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ env.FRONTEND_IMAGE }}:${{ env.IMAGE_TAG }}
-            ${{ env.FRONTEND_IMAGE }}:latest
-          build-args: |
-            VITE_API_BASE_URL=/api
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Get VM and LB IPs from Terraform state
-        id: tf
-        env:
-          OCI_PRIVATE_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
-        run: |
-          mkdir -p $HOME/.oci
-          cat > $HOME/.oci/config << OCIEOF
-          [DEFAULT]
-          user=${{ secrets.OCI_USER_OCID }}
-          fingerprint=${{ secrets.OCI_FINGERPRINT }}
-          tenancy=${{ secrets.OCI_TENANCY_OCID }}
-          region=${{ vars.OCI_REGION || 'us-ashburn-1' }}
-          key_file=$HOME/.oci/oci_api_key.pem
-          OCIEOF
-          printf '%s\n' "$OCI_PRIVATE_KEY" | tr -d '\r' > $HOME/.oci/oci_api_key.pem
-          chmod 600 $HOME/.oci/oci_api_key.pem
-          pip install -q oci-cli
-
-          oci os object get --bucket-name digital-wallet-tfstate \
-            --name terraform.tfstate --file terraform.tfstate || echo "No state yet"
-
-          echo "vm_public_ip=$(jq -r '.outputs.vm_public_ip.value // empty' terraform.tfstate)" >> $GITHUB_OUTPUT
-          echo "lb_ip=$(jq -r '.outputs.load_balancer_public_ip.value // empty' terraform.tfstate)" >> $GITHUB_OUTPUT
-
-      - name: Set up SSH
-        env:
-          OCI_SSH_PRIVATE_KEY: ${{ secrets.OCI_SSH_PRIVATE_KEY }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$OCI_SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ steps.tf.outputs.vm_public_ip }} >> ~/.ssh/known_hosts
-
-      - name: Update frontend image on VM
-        run: |
-          IMAGE="${{ steps.set-image.outputs.image }}:${{ env.IMAGE_TAG }}"
-          ssh opc@${{ steps.tf.outputs.vm_public_ip }} "
-            grep -q '^FRONTEND_IMAGE=' /opt/digital-wallet/.env && \
-              sudo sed -i 's|^FRONTEND_IMAGE=.*|FRONTEND_IMAGE=$IMAGE|' /opt/digital-wallet/.env || \
-              echo 'FRONTEND_IMAGE=$IMAGE' | sudo tee -a /opt/digital-wallet/.env
-          "
-
-      - name: Deploy on VM
-        run: |
-          ssh opc@${{ steps.tf.outputs.vm_public_ip }} \
-            "OCI_DOCKER_USERNAME='${{ secrets.OCI_DOCKER_USERNAME }}' \
-             OCI_AUTH_TOKEN='${{ secrets.OCI_AUTH_TOKEN }}' \
-             sudo -E /opt/digital-wallet/deploy.sh"
-
-      - name: Verify frontend
-        run: |
-          sleep 10
-          curl -s -o /dev/null -w "Frontend: %{http_code}\n" "http://${{ steps.tf.outputs.lb_ip }}/"
+      - name: Trigger Render Deploy
+        run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_UI_URL }}"
