@@ -62,12 +62,12 @@ jobs:
           region=${{ vars.OCI_REGION || 'us-ashburn-1' }}
           key_file=$HOME/.oci/oci_api_key.pem
           OCIEOF
-          echo "$OCI_PRIVATE_KEY" > $HOME/.oci/oci_api_key.pem
+          printf '%s\n' "$OCI_PRIVATE_KEY" | tr -d '\r' > $HOME/.oci/oci_api_key.pem
           chmod 600 $HOME/.oci/oci_api_key.pem
           pip install -q oci-cli
 
           oci os object get --bucket-name digital-wallet-tfstate \
-            --name terraform.tfstate --file terraform.tfstate 2>/dev/null || echo "No state yet"
+            --name terraform.tfstate --file terraform.tfstate || echo "No state yet"
 
           echo "vm_public_ip=$(jq -r '.outputs.vm_public_ip.value // empty' terraform.tfstate)" >> $GITHUB_OUTPUT
           echo "lb_ip=$(jq -r '.outputs.load_balancer_public_ip.value // empty' terraform.tfstate)" >> $GITHUB_OUTPUT
