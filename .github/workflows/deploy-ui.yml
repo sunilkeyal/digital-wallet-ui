@@ -15,6 +15,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Checkout iac repo for Terraform state
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/digital-wallet-iac
+          path: digital-wallet-iac
+          token: ${{ secrets.GH_PAT }}
+
       - name: Set OCIR image name
         id: set-image
         run: |
@@ -38,7 +45,7 @@ jobs:
       - name: Build and push frontend image
         uses: docker/build-push-action@v6
         with:
-          context: digital-wallet-ui
+          context: .
           push: true
           tags: |
             ${{ env.FRONTEND_IMAGE }}:${{ env.IMAGE_TAG }}
