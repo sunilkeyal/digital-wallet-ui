@@ -2,7 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Box, Button, Flex, Text, IconButton, Menu } from '@chakra-ui/react';
 import { useAuth } from '../context/AuthContext';
 import { useColorMode } from '../context/ColorModeContext';
-import { IconMenu2, IconUser, IconLogout, IconDashboard, IconVaccine, IconCreditCard, IconFlask, IconShield, IconSun, IconMoon } from '@tabler/icons-react';
+import { IconMenu2, IconUser, IconLogout, IconDashboard, IconVaccine, IconCreditCard, IconFlask, IconNotes, IconShield, IconSun, IconMoon } from '@tabler/icons-react';
 
 interface TopNavProps {
   onMenuClick: () => void;
@@ -13,6 +13,7 @@ const navLinks = [
   { to: '/immunizations', label: 'Immunizations', icon: IconVaccine },
   { to: '/insurance-cards', label: 'Insurance Cards', icon: IconCreditCard },
   { to: '/lab-results', label: 'Lab Results', icon: IconFlask },
+  { to: '/notes', label: 'Notes', icon: IconNotes },
 ];
 
 const TopNav = ({ onMenuClick }: TopNavProps) => {

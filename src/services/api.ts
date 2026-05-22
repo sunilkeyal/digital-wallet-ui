@@ -1,6 +1,6 @@
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
-import type { ImmunizationDto, InsuranceCardDto, LabResultDto, PageResponse, LoginRequest, LoginResponse, User } from '../types';
+import type { ImmunizationDto, InsuranceCardDto, LabResultDto, NoteDto, NoteGroupDto, PageResponse, LoginRequest, LoginResponse, User } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
@@ -71,6 +71,36 @@ export const authApi = {
     api.delete(`/admin/users/${id}`),
   seedData: (userId: string): Promise<{ data: { message: string } }> =>
     api.post('/admin/seed', { userId }),
+};
+
+export const noteGroupApi = {
+  getAll: (): Promise<{ data: NoteGroupDto[] }> =>
+    api.get('/note-groups'),
+  create: (data: { name: string }): Promise<{ data: NoteGroupDto }> =>
+    api.post('/note-groups', data),
+  update: (id: string, data: { name: string }): Promise<{ data: NoteGroupDto }> =>
+    api.put(`/note-groups/${id}`, data),
+  delete: (id: string): Promise<{ data: void }> =>
+    api.delete(`/note-groups/${id}`),
+};
+
+export const noteApi = {
+  getRecent: (): Promise<{ data: NoteDto[] }> =>
+    api.get('/notes/recent'),
+  getByGroup: (groupId: string): Promise<{ data: NoteDto[] }> =>
+    api.get('/notes', { params: { groupId } }),
+  getById: (id: string): Promise<{ data: NoteDto }> =>
+    api.get(`/notes/${id}`),
+  create: (data: NoteDto): Promise<{ data: NoteDto }> =>
+    api.post('/notes', data),
+  update: (id: string, data: NoteDto): Promise<{ data: NoteDto }> =>
+    api.put(`/notes/${id}`, data),
+  recordView: (id: string): Promise<{ data: NoteDto }> =>
+    api.put(`/notes/${id}/view`),
+  reorder: (groupId: string, noteIds: string[]): Promise<{ data: void }> =>
+    api.put('/notes/reorder', { groupId, noteIds }),
+  delete: (id: string): Promise<{ data: void }> =>
+    api.delete(`/notes/${id}`),
 };
 
 export default api;

@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import Immunizations from './pages/Immunizations';
 import InsuranceCards from './pages/InsuranceCards';
 import LabResults from './pages/LabResults';
+import Notes from './pages/Notes';
 import Admin from './pages/Admin';
 
 const PrivateRoute = ({ children }: { children: ReactNode }) => {
@@ -42,6 +43,7 @@ function App() {
             <Route path="immunizations" element={<Immunizations />} />
             <Route path="insurance-cards" element={<InsuranceCards />} />
             <Route path="lab-results" element={<LabResults />} />
+            <Route path="notes" element={<Notes />} />
             <Route
               path="admin"
               element={

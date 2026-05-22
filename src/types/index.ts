@@ -88,3 +88,24 @@ export interface LoginResponse {
   token: string;
   userId: string;
 }
+
+export interface NoteDto {
+  id?: string;
+  userId?: string;
+  groupId?: string;
+  title: string;
+  content: string;
+  orderIndex?: number;
+  viewedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface NoteGroupDto {
+  id?: string;
+  userId?: string;
+  name: string;
+  notes?: NoteDto[];
+  createdAt?: string;
+  updatedAt?: string;
+}

@@ -5,13 +5,15 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useColorMode } from '../context/ColorModeContext';
 import TopNav from './TopNav';
-import { IconDashboard, IconVaccine, IconCreditCard, IconFlask, IconShield } from '@tabler/icons-react';
+import { IconDashboard, IconVaccine, IconCreditCard, IconFlask, IconNotes, IconShield } from '@tabler/icons-react';
+import { NoteProvider } from '../context/NoteContext';
 
 const drawerLinks = [
   { to: '/dashboard', label: 'Dashboard', icon: IconDashboard },
   { to: '/immunizations', label: 'Immunizations', icon: IconVaccine },
   { to: '/insurance-cards', label: 'Insurance Cards', icon: IconCreditCard },
   { to: '/lab-results', label: 'Lab Results', icon: IconFlask },
+  { to: '/notes', label: 'Notes', icon: IconNotes },
 ];
 
 const MainLayout = () => {
@@ -72,7 +74,9 @@ const MainLayout = () => {
       </Drawer.Root>
 
       <Box as="main" px={4} py={6} maxW="1200px" mx="auto">
-        <Outlet />
+        <NoteProvider>
+          <Outlet />
+        </NoteProvider>
       </Box>
     </Box>
     </Theme>
