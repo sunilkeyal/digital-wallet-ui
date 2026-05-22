@@ -1,17 +1,20 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
+import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 import { AuthProvider } from '../context/AuthContext';
-import Header from '../components/Header';
+import TopNav from '../components/TopNav';
 
-describe('Header', () => {
-  it('renders header with logo text', () => {
+describe('TopNav', () => {
+  it('renders nav with app name', () => {
     render(
-      <BrowserRouter>
-        <AuthProvider>
-          <Header />
-        </AuthProvider>
-      </BrowserRouter>
+      <ChakraProvider value={defaultSystem}>
+        <BrowserRouter>
+          <AuthProvider>
+            <TopNav onMenuClick={() => {}} />
+          </AuthProvider>
+        </BrowserRouter>
+      </ChakraProvider>
     );
     expect(screen.getByText(/Digital Wallet/i)).toBeInTheDocument();
   });

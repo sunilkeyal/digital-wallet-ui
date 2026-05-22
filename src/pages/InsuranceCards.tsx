@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Box, Text, Paper, Table, Button, Modal, TextInput, Alert, Pagination, Select, Stack, ActionIcon, Group } from '@mantine/core';
-import { DateInput } from '@mantine/dates';
-import { useDisclosure } from '@mantine/hooks';
 import { IconPlus, IconTrash, IconArrowUp, IconArrowDown } from '@tabler/icons-react';
 import { insuranceCardApi } from '../services/api';
 import type { InsuranceCardDto, PageResponse } from '../types';
+import {
+  Box, Button, Heading, Text, Table, Dialog, Field, Input,
+  NativeSelect, Alert, HStack, VStack, IconButton, Portal, Spinner, Center,
+} from '@chakra-ui/react';
 
 const PAGE_SIZE_OPTIONS = ['10', '20', '50', '100', 'ALL'];
 
@@ -12,7 +13,7 @@ const InsuranceCards = () => {
   const [cards, setCards] = useState<InsuranceCardDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [opened, { open, close }] = useDisclosure(false);
+  const [opened, setOpened] = useState(false);
   const [page, setPage] = useState(1);
   const [size, setSize] = useState(10);
   const [sortBy, setSortBy] = useState('provider');
@@ -21,13 +22,8 @@ const InsuranceCards = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [isPaginated, setIsPaginated] = useState(true);
   const [formData, setFormData] = useState<InsuranceCardDto>({
-    provider: '',
-    policyNumber: '',
-    groupNumber: '',
-    effectiveDate: '',
-    expiryDate: '',
-    memberName: '',
-    relationship: '',
+    provider: '', policyNumber: '', groupNumber: '', effectiveDate: '',
+    expiryDate: '', memberName: '', relationship: '',
   });
 
   const fetchCards = useCallback(async () => {
@@ -35,7 +31,6 @@ const InsuranceCards = () => {
       setLoading(true);
       const response = await insuranceCardApi.getAll(page - 1, size, sortBy, sortDir);
       const data = response.data;
-
       if (Array.isArray(data)) {
         setCards(data);
         setTotalElements(data.length);
@@ -54,52 +49,34 @@ const InsuranceCards = () => {
     }
   }, [page, size, sortBy, sortDir]);
 
-  useEffect(() => {
-    fetchCards();
-  }, [fetchCards]);
+  useEffect(() => { fetchCards(); }, [fetchCards]);
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData({ ...formData, [field]: value });
-  };
+  const handleInputChange = (field: string, value: string) =>
+    setFormData((prev) => ({ ...prev, [field]: value }));
 
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
-  };
+  const handlePageChange = (p: number) => setPage(p);
 
-  const handleSizeChange = (value: string | null) => {
-    const newSize = value === 'ALL' ? 1000 : Number(value);
-    setSize(newSize);
+  const handleSizeChange = (value: string) => {
+    setSize(value === 'ALL' ? 1000 : Number(value));
     setPage(1);
   };
 
   const handleSort = (column: string) => {
-    if (sortBy === column) {
-      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(column);
-      setSortDir('asc');
-    }
+    if (sortBy === column) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortBy(column); setSortDir('asc'); }
     setPage(1);
   };
 
-  const getSortIcon = (column: string) => {
+  const SortIcon = ({ column }: { column: string }) => {
     if (sortBy !== column) return null;
-    return sortDir === 'asc' ? <IconArrowUp size={14} /> : <IconArrowDown size={14} />;
+    return sortDir === 'asc' ? <IconArrowUp size={12} /> : <IconArrowDown size={12} />;
   };
 
   const handleSubmit = async () => {
     try {
       await insuranceCardApi.create(formData);
-      close();
-      setFormData({
-        provider: '',
-        policyNumber: '',
-        groupNumber: '',
-        effectiveDate: '',
-        expiryDate: '',
-        memberName: '',
-        relationship: '',
-      });
+      setOpened(false);
+      setFormData({ provider: '', policyNumber: '', groupNumber: '', effectiveDate: '', expiryDate: '', memberName: '', relationship: '' });
       fetchCards();
     } catch {
       setError('Failed to add insurance card');
@@ -107,178 +84,149 @@ const InsuranceCards = () => {
   };
 
   const handleDelete = async (id: string) => {
-    try {
-      await insuranceCardApi.delete(id);
-      fetchCards();
-    } catch {
-      setError('Failed to delete insurance card');
-    }
+    try { await insuranceCardApi.delete(id); fetchCards(); }
+    catch { setError('Failed to delete insurance card'); }
   };
 
-  if (loading) return <Text>Loading...</Text>;
+  if (loading) return <Center py={12}><Spinner color="blue.600" /></Center>;
 
   return (
-    <Box mt={0} mb={0}>
-      <Group justify="space-between" mb="xs">
-        <Text size="xl" fw={700}>Insurance Cards</Text>
-        <Button leftSection={<IconPlus size={16} />} onClick={open}>
-          Add Card
+    <Box>
+      <HStack justify="space-between" mb={4}>
+        <Box>
+          <Heading as="h1" size="lg">Insurance Cards</Heading>
+          <Text color="gray.500" fontSize="sm">Manage your insurance card information.</Text>
+        </Box>
+        <Button colorScheme="blue" onClick={() => setOpened(true)}>
+          <IconPlus size={16} />
+          <Box ml={1.5}>Add Card</Box>
         </Button>
-      </Group>
+      </HStack>
 
-      {error && <Alert color="red" mb="md">{error}</Alert>}
+      {error && <Alert.Root status="error" mb={4}><Alert.Content>{error}</Alert.Content></Alert.Root>}
 
-      <Paper radius="md" style={{ overflowX: 'auto' }}>
-        <Table striped highlightOnHover>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th style={{ cursor: 'pointer' }} onClick={() => handleSort('provider')}>
-                <Group gap={4} justify="space-between">
-                  Provider
-                  {getSortIcon('provider')}
-                </Group>
-              </Table.Th>
-              <Table.Th style={{ cursor: 'pointer' }} onClick={() => handleSort('policyNumber')}>
-                <Group gap={4} justify="space-between">
-                  Policy Number
-                  {getSortIcon('policyNumber')}
-                </Group>
-              </Table.Th>
-              <Table.Th style={{ cursor: 'pointer' }} onClick={() => handleSort('memberName')}>
-                <Group gap={4} justify="space-between">
-                  Member Name
-                  {getSortIcon('memberName')}
-                </Group>
-              </Table.Th>
-              <Table.Th style={{ cursor: 'pointer' }} onClick={() => handleSort('effectiveDate')}>
-                <Group gap={4} justify="space-between">
-                  Effective Date
-                  {getSortIcon('effectiveDate')}
-                </Group>
-              </Table.Th>
-              <Table.Th style={{ cursor: 'pointer' }} onClick={() => handleSort('expiryDate')}>
-                <Group gap={4} justify="space-between">
-                  Expiry Date
-                  {getSortIcon('expiryDate')}
-                </Group>
-              </Table.Th>
-              <Table.Th>Actions</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
+      <Box borderWidth="1px" rounded="lg" overflow="hidden">
+        <Table.Root>
+          <Table.Header>
+            <Table.Row>
+              {['provider', 'policyNumber', 'memberName', 'effectiveDate', 'expiryDate'].map((col) => (
+                <Table.ColumnHeader key={col} cursor="pointer" onClick={() => handleSort(col)}>
+                  <HStack gap={1}>
+                    <Text>{col === 'policyNumber' ? 'Policy #' : col === 'effectiveDate' ? 'Effective Date' : col === 'expiryDate' ? 'Expiry Date' : col === 'memberName' ? 'Member Name' : col.charAt(0).toUpperCase() + col.slice(1)}</Text>
+                    <SortIcon column={col} />
+                  </HStack>
+                </Table.ColumnHeader>
+              ))}
+              <Table.ColumnHeader w="16">Actions</Table.ColumnHeader>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
             {cards.map((card) => (
-              <Table.Tr key={card.id}>
-                <Table.Td>{card.provider}</Table.Td>
-                <Table.Td>{card.policyNumber}</Table.Td>
-                <Table.Td>{card.memberName}</Table.Td>
-                <Table.Td>{card.effectiveDate}</Table.Td>
-                <Table.Td>{card.expiryDate}</Table.Td>
-                <Table.Td>
-                  <ActionIcon color="red" onClick={() => handleDelete(card.id!)}>
+              <Table.Row key={card.id}>
+                <Table.Cell fontWeight="medium">{card.provider}</Table.Cell>
+                <Table.Cell>{card.policyNumber}</Table.Cell>
+                <Table.Cell>{card.memberName}</Table.Cell>
+                <Table.Cell>{card.effectiveDate}</Table.Cell>
+                <Table.Cell>{card.expiryDate}</Table.Cell>
+                <Table.Cell>
+                  <IconButton aria-label="Delete" colorPalette="red" variant="ghost" size="sm" onClick={() => handleDelete(card.id!)}>
                     <IconTrash size={16} />
-                  </ActionIcon>
-                </Table.Td>
-              </Table.Tr>
+                  </IconButton>
+                </Table.Cell>
+              </Table.Row>
             ))}
             {cards.length === 0 && (
-              <Table.Tr>
-                <Table.Td colSpan={6} ta="center">
-                  No insurance cards found
-                </Table.Td>
-              </Table.Tr>
+              <Table.Row>
+                <Table.Cell colSpan={6} textAlign="center" color="gray.500">No insurance cards found.</Table.Cell>
+              </Table.Row>
             )}
-          </Table.Tbody>
-        </Table>
-        <Box p="md" style={{ borderTop: '1px solid #eee' }}>
-          <Stack gap="xs" align="center">
-            <Group gap="xs">
-              <Text size="sm" c="dimmed">Rows per page:</Text>
-              <Select
-                size="xs"
-                value={size === 1000 ? 'ALL' : String(size)}
-                onChange={handleSizeChange}
-                data={PAGE_SIZE_OPTIONS}
-                style={{ width: 70 }}
-              />
-            </Group>
-            {isPaginated && (
-              <Stack gap="xs" align="center">
-                <Text size="sm" c="dimmed">
-                  {size === 1000
-                    ? `Showing all ${totalElements} records`
-                    : `Showing ${(page - 1) * size + 1}-${Math.min(page * size, totalElements)} of ${totalElements} records`}
-                </Text>
-                {totalPages > 1 && (
-                  <Pagination
-                    value={page}
-                    onChange={handlePageChange}
-                    total={totalPages}
-                    boundaries={1}
-                    siblings={1}
-                    withEdges
-                  />
-                )}
-              </Stack>
-            )}
-            {!isPaginated && (
-              <Text size="sm" c="dimmed">
-                Showing all {totalElements} records
-              </Text>
-            )}
-          </Stack>
-        </Box>
-      </Paper>
+          </Table.Body>
+        </Table.Root>
 
-      <Modal opened={opened} onClose={close} title="Add Insurance Card" centered>
-        <TextInput
-          label="Provider"
-          value={formData.provider}
-          onChange={(e) => handleInputChange('provider', e.target.value)}
-          mb="sm"
-          required
-        />
-        <TextInput
-          label="Policy Number"
-          value={formData.policyNumber}
-          onChange={(e) => handleInputChange('policyNumber', e.target.value)}
-          mb="sm"
-          required
-        />
-        <TextInput
-          label="Group Number"
-          value={formData.groupNumber}
-          onChange={(e) => handleInputChange('groupNumber', e.target.value)}
-          mb="sm"
-        />
-        <DateInput
-          label="Effective Date"
-          value={formData.effectiveDate || undefined}
-          onChange={(date) => handleInputChange('effectiveDate', date ?? '')}
-          mb="sm"
-        />
-        <DateInput
-          label="Expiry Date"
-          value={formData.expiryDate || undefined}
-          onChange={(date) => handleInputChange('expiryDate', date ?? '')}
-          mb="sm"
-        />
-        <TextInput
-          label="Member Name"
-          value={formData.memberName}
-          onChange={(e) => handleInputChange('memberName', e.target.value)}
-          mb="sm"
-        />
-        <TextInput
-          label="Relationship"
-          value={formData.relationship}
-          onChange={(e) => handleInputChange('relationship', e.target.value)}
-          mb="md"
-        />
-        <Group justify="flex-end">
-          <Button variant="default" onClick={close}>Cancel</Button>
-          <Button onClick={handleSubmit}>Add Card</Button>
-        </Group>
-      </Modal>
+        <Box borderTopWidth="1px" p={3}>
+          <HStack justify="space-between" wrap="wrap" gap={3}>
+            <HStack gap={2}>
+              <Text fontSize="sm" color="gray.500">Rows per page:</Text>
+              <NativeSelect.Root size="sm" w="70px">
+                <NativeSelect.Field value={size === 1000 ? 'ALL' : String(size)} onChange={(e) => handleSizeChange(e.target.value)}>
+                  {PAGE_SIZE_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </NativeSelect.Field>
+              </NativeSelect.Root>
+            </HStack>
+            <HStack gap={3}>
+              <Text fontSize="sm" color="gray.500">
+                {size === 1000
+                  ? `Showing all ${totalElements} records`
+                  : `Showing ${(page - 1) * size + 1}-${Math.min(page * size, totalElements)} of ${totalElements}`}
+              </Text>
+              {isPaginated && totalPages > 1 && (
+                <HStack gap={1}>
+                  <Button size="xs" variant="outline" disabled={page <= 1} onClick={() => handlePageChange(page - 1)}>Prev</Button>
+                  <Text fontSize="sm" px={2}>{page} of {totalPages}</Text>
+                  <Button size="xs" variant="outline" disabled={page >= totalPages} onClick={() => handlePageChange(page + 1)}>Next</Button>
+                </HStack>
+              )}
+            </HStack>
+          </HStack>
+        </Box>
+      </Box>
+
+      <Dialog.Root open={opened} onOpenChange={(e) => setOpened(e.open)}>
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <Dialog.Header>
+                <Dialog.Title>Add Insurance Card</Dialog.Title>
+              </Dialog.Header>
+              <Dialog.Body>
+                <VStack gap={4}>
+                  <HStack gap={4} w="full">
+                    <Field.Root flex={1}>
+                      <Field.Label>Provider</Field.Label>
+                      <Input value={formData.provider} onChange={(e) => handleInputChange('provider', e.target.value)} required />
+                    </Field.Root>
+                    <Field.Root flex={1}>
+                      <Field.Label>Policy Number</Field.Label>
+                      <Input value={formData.policyNumber} onChange={(e) => handleInputChange('policyNumber', e.target.value)} required />
+                    </Field.Root>
+                  </HStack>
+                  <HStack gap={4} w="full">
+                    <Field.Root flex={1}>
+                      <Field.Label>Group Number</Field.Label>
+                      <Input value={formData.groupNumber} onChange={(e) => handleInputChange('groupNumber', e.target.value)} />
+                    </Field.Root>
+                    <Field.Root flex={1}>
+                      <Field.Label>Member Name</Field.Label>
+                      <Input value={formData.memberName} onChange={(e) => handleInputChange('memberName', e.target.value)} />
+                    </Field.Root>
+                  </HStack>
+                  <HStack gap={4} w="full">
+                    <Field.Root flex={1}>
+                      <Field.Label>Effective Date</Field.Label>
+                      <Input type="date" value={formData.effectiveDate} onChange={(e) => handleInputChange('effectiveDate', e.target.value)} />
+                    </Field.Root>
+                    <Field.Root flex={1}>
+                      <Field.Label>Expiry Date</Field.Label>
+                      <Input type="date" value={formData.expiryDate} onChange={(e) => handleInputChange('expiryDate', e.target.value)} />
+                    </Field.Root>
+                  </HStack>
+                  <Field.Root>
+                    <Field.Label>Relationship</Field.Label>
+                    <Input value={formData.relationship} onChange={(e) => handleInputChange('relationship', e.target.value)} />
+                  </Field.Root>
+                </VStack>
+              </Dialog.Body>
+              <Dialog.Footer>
+                <Button variant="outline" mr={3} onClick={() => setOpened(false)}>Cancel</Button>
+                <Button colorScheme="blue" onClick={handleSubmit}>Add Card</Button>
+              </Dialog.Footer>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
     </Box>
   );
 };

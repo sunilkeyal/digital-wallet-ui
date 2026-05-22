@@ -1,26 +1,18 @@
 import { useState } from 'react';
-import { Box, Text, TextInput, PasswordInput, Button, Paper, Alert, Center } from '@mantine/core';
+import { Box, Button, Center, Field, Heading, Input, Text, VStack, Alert } from '@chakra-ui/react';
 import { useAuth } from '../context/AuthContext';
 import type { LoginRequest } from '../types';
 
 const Login = () => {
-  const [credentials, setCredentials] = useState<LoginRequest>({
-    email: '',
-    password: '',
-  });
+  const [credentials, setCredentials] = useState<LoginRequest>({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
-
-  const handleInputChange = (field: string, value: string) => {
-    setCredentials({ ...credentials, [field]: value });
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
       await login(credentials);
     } catch {
@@ -31,38 +23,55 @@ const Login = () => {
   };
 
   return (
-    <Center style={{ minHeight: '100vh', backgroundColor: 'var(--mantine-color-gray-1)' }}>
-      <Paper p={{ base: 'md', sm: 'xl' }} radius="md" style={{ maxWidth: 400, width: '100%', margin: '16px' }}>
-        <Text size="xl" fw={700} ta="center" mb="md" c="blue.7">
-          Digital Wallet
-        </Text>
-        <Text size="lg" ta="center" mb="lg" c="gray.7">
-          Login
-        </Text>
+    <Center minH="100vh" bg="gray.50">
+      <Box w="full" maxW="sm" mx={4}>
+        <VStack gap={6} align="stretch">
+          <Box textAlign="center">
+            <Heading as="h1" size="xl" color="blue.600" mb={1}>
+              Digital Wallet
+            </Heading>
+            <Text color="gray.500" fontSize="sm">
+              Sign in to your account
+            </Text>
+          </Box>
 
-        {error && <Alert color="red" mb="md">{error}</Alert>}
+          {error && (
+            <Alert.Root status="error">
+              <Alert.Content>{error}</Alert.Content>
+            </Alert.Root>
+          )}
 
-        <form onSubmit={handleSubmit}>
-          <TextInput
-            label="Email"
-            type="email"
-            value={credentials.email}
-            onChange={(e) => handleInputChange('email', e.target.value)}
-            required
-            mb="md"
-          />
-          <PasswordInput
-            label="Password"
-            value={credentials.password}
-            onChange={(e) => handleInputChange('password', e.target.value)}
-            required
-            mb="xl"
-          />
-          <Button type="submit" fullWidth loading={loading}>
-            {loading ? 'Logging in...' : 'Login'}
-          </Button>
-        </form>
-      </Paper>
+          <Box as="form" onSubmit={handleSubmit}>
+            <VStack gap={4}>
+              <Field.Root>
+                <Field.Label>Email</Field.Label>
+                <Input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={credentials.email}
+                  onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
+                  required
+                />
+              </Field.Root>
+
+              <Field.Root>
+                <Field.Label>Password</Field.Label>
+                <Input
+                  type="password"
+                  placeholder="Enter your password"
+                  value={credentials.password}
+                  onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
+                  required
+                />
+              </Field.Root>
+
+              <Button type="submit" colorScheme="blue" w="full" loading={loading}>
+                {loading ? 'Signing in...' : 'Sign in'}
+              </Button>
+            </VStack>
+          </Box>
+        </VStack>
+      </Box>
     </Center>
   );
 };

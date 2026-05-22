@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ColorModeProvider } from './context/ColorModeContext';
 import MainLayout from './components/MainLayout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -25,6 +26,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <ColorModeProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route
@@ -50,6 +52,7 @@ function App() {
             />
           </Route>
         </Routes>
+        </ColorModeProvider>
       </AuthProvider>
     </BrowserRouter>
   );

@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Box, Text, Paper, Table, Button, Modal, TextInput, Select, Alert, Pagination, Group, Stack, ActionIcon } from '@mantine/core';
-import { DateInput } from '@mantine/dates';
-import { useDisclosure } from '@mantine/hooks';
 import { IconPlus, IconTrash, IconArrowUp, IconArrowDown } from '@tabler/icons-react';
 import { immunizationApi } from '../services/api';
 import type { ImmunizationDto, PageResponse } from '../types';
+import {
+  Box, Button, Heading, Text, Table, Dialog, Field, Input,
+  NativeSelect, Alert, HStack, VStack, IconButton, Portal, Spinner, Center, Badge,
+} from '@chakra-ui/react';
 
 const PAGE_SIZE_OPTIONS = ['10', '20', '50', '100', 'ALL'];
 
@@ -12,7 +13,7 @@ const Immunizations = () => {
   const [immunizations, setImmunizations] = useState<ImmunizationDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [opened, { open, close }] = useDisclosure(false);
+  const [opened, setOpened] = useState(false);
   const [page, setPage] = useState(1);
   const [size, setSize] = useState(10);
   const [sortBy, setSortBy] = useState('vaccineName');
@@ -21,14 +22,8 @@ const Immunizations = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [isPaginated, setIsPaginated] = useState(true);
   const [formData, setFormData] = useState<ImmunizationDto>({
-    vaccineName: '',
-    manufacturer: '',
-    lotNumber: '',
-    administrationDate: '',
-    administeredBy: '',
-    facilityName: '',
-    facilityAddress: '',
-    notes: '',
+    vaccineName: '', manufacturer: '', lotNumber: '', administrationDate: '',
+    administeredBy: '', facilityName: '', facilityAddress: '', notes: '',
   });
 
   const fetchImmunizations = useCallback(async () => {
@@ -36,7 +31,6 @@ const Immunizations = () => {
       setLoading(true);
       const response = await immunizationApi.getAll(page - 1, size, sortBy, sortDir);
       const data = response.data;
-
       if (Array.isArray(data)) {
         setImmunizations(data);
         setTotalElements(data.length);
@@ -55,28 +49,16 @@ const Immunizations = () => {
     }
   }, [page, size, sortBy, sortDir]);
 
-  useEffect(() => {
-    fetchImmunizations();
-  }, [fetchImmunizations]);
+  useEffect(() => { fetchImmunizations(); }, [fetchImmunizations]);
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData({ ...formData, [field]: value });
-  };
+  const handleInputChange = (field: string, value: string) =>
+    setFormData((prev) => ({ ...prev, [field]: value }));
 
   const handleSubmit = async () => {
     try {
       await immunizationApi.create(formData);
-      close();
-      setFormData({
-        vaccineName: '',
-        manufacturer: '',
-        lotNumber: '',
-        administrationDate: '',
-        administeredBy: '',
-        facilityName: '',
-        facilityAddress: '',
-        notes: '',
-      });
+      setOpened(false);
+      setFormData({ vaccineName: '', manufacturer: '', lotNumber: '', administrationDate: '', administeredBy: '', facilityName: '', facilityAddress: '', notes: '' });
       fetchImmunizations();
     } catch {
       setError('Failed to add immunization');
@@ -84,215 +66,170 @@ const Immunizations = () => {
   };
 
   const handleDelete = async (id: string) => {
-    try {
-      await immunizationApi.delete(id);
-      fetchImmunizations();
-    } catch {
-      setError('Failed to delete immunization');
-    }
+    try { await immunizationApi.delete(id); fetchImmunizations(); }
+    catch { setError('Failed to delete immunization'); }
   };
 
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
-  };
+  const handlePageChange = (p: number) => setPage(p);
 
-  const handleSizeChange = (value: string | null) => {
-    const newSize = value === 'ALL' ? 1000 : Number(value);
-    setSize(newSize);
+  const handleSizeChange = (value: string) => {
+    setSize(value === 'ALL' ? 1000 : Number(value));
     setPage(1);
   };
 
   const handleSort = (column: string) => {
-    if (sortBy === column) {
-      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(column);
-      setSortDir('asc');
-    }
+    if (sortBy === column) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortBy(column); setSortDir('asc'); }
     setPage(1);
   };
 
-  const getSortIcon = (column: string) => {
+  const SortIcon = ({ column }: { column: string }) => {
     if (sortBy !== column) return null;
-    return sortDir === 'asc' ? <IconArrowUp size={14} /> : <IconArrowDown size={14} />;
+    return sortDir === 'asc' ? <IconArrowUp size={12} /> : <IconArrowDown size={12} />;
   };
 
-  if (loading) return <Text>Loading...</Text>;
+  if (loading) return <Center py={12}><Spinner color="blue.600" /></Center>;
 
   return (
-    <Box mt={0} mb={0}>
-      <Group justify="space-between" mb="xs">
-        <Text size="xl" fw={700}>Immunization History</Text>
-        <Button leftSection={<IconPlus size={16} />} onClick={open}>
-          Add Record
+    <Box>
+      <HStack justify="space-between" mb={4}>
+        <Box>
+          <Heading as="h1" size="lg">Immunization History</Heading>
+          <Text color="gray.500" fontSize="sm">Manage your vaccination records.</Text>
+        </Box>
+        <Button colorScheme="blue" onClick={() => setOpened(true)}>
+          <IconPlus size={16} />
+          <Box ml={1.5}>Add Record</Box>
         </Button>
-      </Group>
+      </HStack>
 
-      {error && <Alert color="red" mb="md">{error}</Alert>}
+      {error && <Alert.Root status="error" mb={4}><Alert.Content>{error}</Alert.Content></Alert.Root>}
 
-      <Paper radius="md" style={{ overflowX: 'auto' }}>
-        <Table striped highlightOnHover>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th style={{ cursor: 'pointer' }} onClick={() => handleSort('vaccineName')}>
-                <Group gap={4} justify="space-between">
-                  Vaccine
-                  {getSortIcon('vaccineName')}
-                </Group>
-              </Table.Th>
-              <Table.Th style={{ cursor: 'pointer' }} onClick={() => handleSort('manufacturer')}>
-                <Group gap={4} justify="space-between">
-                  Manufacturer
-                  {getSortIcon('manufacturer')}
-                </Group>
-              </Table.Th>
-              <Table.Th style={{ cursor: 'pointer' }} onClick={() => handleSort('lotNumber')}>
-                <Group gap={4} justify="space-between">
-                  Lot Number
-                  {getSortIcon('lotNumber')}
-                </Group>
-              </Table.Th>
-              <Table.Th style={{ cursor: 'pointer' }} onClick={() => handleSort('administrationDate')}>
-                <Group gap={4} justify="space-between">
-                  Date Administered
-                  {getSortIcon('administrationDate')}
-                </Group>
-              </Table.Th>
-              <Table.Th style={{ cursor: 'pointer' }} onClick={() => handleSort('administeredBy')}>
-                <Group gap={4} justify="space-between">
-                  Administered By
-                  {getSortIcon('administeredBy')}
-                </Group>
-              </Table.Th>
-              <Table.Th style={{ cursor: 'pointer' }} onClick={() => handleSort('facilityName')}>
-                <Group gap={4} justify="space-between">
-                  Facility
-                  {getSortIcon('facilityName')}
-                </Group>
-              </Table.Th>
-              <Table.Th>Actions</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
+      <Box borderWidth="1px" rounded="lg" overflow="hidden">
+        <Table.Root>
+          <Table.Header>
+            <Table.Row>
+              {['vaccineName', 'manufacturer', 'lotNumber', 'administrationDate', 'administeredBy', 'facilityName'].map((col) => (
+                <Table.ColumnHeader key={col} cursor="pointer" onClick={() => handleSort(col)}>
+                  <HStack gap={1}>
+                    <Text>{col === 'vaccineName' ? 'Vaccine' : col === 'administrationDate' ? 'Date Administered' : col === 'administeredBy' ? 'Administered By' : col === 'facilityName' ? 'Facility' : col.charAt(0).toUpperCase() + col.slice(1)}</Text>
+                    <SortIcon column={col} />
+                  </HStack>
+                </Table.ColumnHeader>
+              ))}
+              <Table.ColumnHeader w="16">Actions</Table.ColumnHeader>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
             {immunizations.map((imm) => (
-              <Table.Tr key={imm.id}>
-                <Table.Td>{imm.vaccineName}</Table.Td>
-                <Table.Td>{imm.manufacturer}</Table.Td>
-                <Table.Td>{imm.lotNumber}</Table.Td>
-                <Table.Td>{imm.administrationDate}</Table.Td>
-                <Table.Td>{imm.administeredBy}</Table.Td>
-                <Table.Td>{imm.facilityName}</Table.Td>
-                <Table.Td>
-                  <ActionIcon color="red" onClick={() => handleDelete(imm.id!)}>
+              <Table.Row key={imm.id}>
+                <Table.Cell fontWeight="medium">{imm.vaccineName}</Table.Cell>
+                <Table.Cell>{imm.manufacturer}</Table.Cell>
+                <Table.Cell>{imm.lotNumber}</Table.Cell>
+                <Table.Cell>{imm.administrationDate}</Table.Cell>
+                <Table.Cell>{imm.administeredBy}</Table.Cell>
+                <Table.Cell>{imm.facilityName}</Table.Cell>
+                <Table.Cell>
+                  <IconButton aria-label="Delete" colorPalette="red" variant="ghost" size="sm" onClick={() => handleDelete(imm.id!)}>
                     <IconTrash size={16} />
-                  </ActionIcon>
-                </Table.Td>
-              </Table.Tr>
+                  </IconButton>
+                </Table.Cell>
+              </Table.Row>
             ))}
             {immunizations.length === 0 && (
-              <Table.Tr>
-                <Table.Td colSpan={7} ta="center">
-                  No immunization records found
-                </Table.Td>
-              </Table.Tr>
+              <Table.Row>
+                <Table.Cell colSpan={7} textAlign="center" color="gray.500">No immunization records found.</Table.Cell>
+              </Table.Row>
             )}
-          </Table.Tbody>
-        </Table>
-        <Box p="md" style={{ borderTop: '1px solid #eee' }}>
-          <Stack gap="xs" align="center">
-            <Group gap="xs">
-              <Text size="sm" c="dimmed">Rows per page:</Text>
-              <Select
-                size="xs"
-                value={size === 1000 ? 'ALL' : String(size)}
-                onChange={handleSizeChange}
-                data={PAGE_SIZE_OPTIONS}
-                style={{ width: 70 }}
-              />
-            </Group>
-            {isPaginated && (
-              <Stack gap="xs" align="center">
-                <Text size="sm" c="dimmed">
-                  {size === 1000
-                    ? `Showing all ${totalElements} records`
-                    : `Showing ${(page - 1) * size + 1}-${Math.min(page * size, totalElements)} of ${totalElements} records`}
-                </Text>
-                {totalPages > 1 && (
-                  <Pagination
-                    value={page}
-                    onChange={handlePageChange}
-                    total={totalPages}
-                    boundaries={1}
-                    siblings={1}
-                    withEdges
-                  />
-                )}
-              </Stack>
-            )}
-            {!isPaginated && (
-              <Text size="sm" c="dimmed">
-                Showing all {totalElements} records
-              </Text>
-            )}
-          </Stack>
-        </Box>
-      </Paper>
+          </Table.Body>
+        </Table.Root>
 
-      <Modal opened={opened} onClose={close} title="Add Immunization Record" centered>
-        <TextInput
-          label="Vaccine Name"
-          value={formData.vaccineName}
-          onChange={(e) => handleInputChange('vaccineName', e.target.value)}
-          mb="sm"
-          required
-        />
-        <TextInput
-          label="Manufacturer"
-          value={formData.manufacturer}
-          onChange={(e) => handleInputChange('manufacturer', e.target.value)}
-          mb="sm"
-        />
-        <TextInput
-          label="Lot Number"
-          value={formData.lotNumber}
-          onChange={(e) => handleInputChange('lotNumber', e.target.value)}
-          mb="sm"
-        />
-        <DateInput
-          label="Date Administered"
-          value={formData.administrationDate || undefined}
-          onChange={(date) => handleInputChange('administrationDate', date ?? '')}
-          mb="sm"
-        />
-        <TextInput
-          label="Administered By"
-          value={formData.administeredBy}
-          onChange={(e) => handleInputChange('administeredBy', e.target.value)}
-          mb="sm"
-        />
-        <TextInput
-          label="Facility Name"
-          value={formData.facilityName}
-          onChange={(e) => handleInputChange('facilityName', e.target.value)}
-          mb="sm"
-        />
-        <TextInput
-          label="Facility Address"
-          value={formData.facilityAddress}
-          onChange={(e) => handleInputChange('facilityAddress', e.target.value)}
-          mb="sm"
-        />
-        <TextInput
-          label="Notes"
-          value={formData.notes}
-          onChange={(e) => handleInputChange('notes', e.target.value)}
-          mb="md"
-        />
-        <Group justify="flex-end">
-          <Button variant="default" onClick={close}>Cancel</Button>
-          <Button onClick={handleSubmit}>Add Record</Button>
-        </Group>
-      </Modal>
+        <Box borderTopWidth="1px" p={3}>
+          <HStack justify="space-between" wrap="wrap" gap={3}>
+            <HStack gap={2}>
+              <Text fontSize="sm" color="gray.500">Rows per page:</Text>
+              <NativeSelect.Root size="sm" w="70px">
+                <NativeSelect.Field value={size === 1000 ? 'ALL' : String(size)} onChange={(e) => handleSizeChange(e.target.value)}>
+                  {PAGE_SIZE_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </NativeSelect.Field>
+              </NativeSelect.Root>
+            </HStack>
+            <HStack gap={3}>
+              <Text fontSize="sm" color="gray.500">
+                {size === 1000
+                  ? `Showing all ${totalElements} records`
+                  : `Showing ${(page - 1) * size + 1}-${Math.min(page * size, totalElements)} of ${totalElements}`}
+              </Text>
+              {isPaginated && totalPages > 1 && (
+                <HStack gap={1}>
+                  <Button size="xs" variant="outline" disabled={page <= 1} onClick={() => handlePageChange(page - 1)}>Prev</Button>
+                  <Text fontSize="sm" px={2}>{page} of {totalPages}</Text>
+                  <Button size="xs" variant="outline" disabled={page >= totalPages} onClick={() => handlePageChange(page + 1)}>Next</Button>
+                </HStack>
+              )}
+            </HStack>
+          </HStack>
+        </Box>
+      </Box>
+
+      <Dialog.Root open={opened} onOpenChange={(e) => setOpened(e.open)}>
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <Dialog.Header>
+                <Dialog.Title>Add Immunization Record</Dialog.Title>
+              </Dialog.Header>
+              <Dialog.Body>
+                <VStack gap={4}>
+                  <Field.Root>
+                    <Field.Label>Vaccine Name</Field.Label>
+                    <Input value={formData.vaccineName} onChange={(e) => handleInputChange('vaccineName', e.target.value)} required />
+                  </Field.Root>
+                  <HStack gap={4} w="full">
+                    <Field.Root flex={1}>
+                      <Field.Label>Manufacturer</Field.Label>
+                      <Input value={formData.manufacturer} onChange={(e) => handleInputChange('manufacturer', e.target.value)} />
+                    </Field.Root>
+                    <Field.Root flex={1}>
+                      <Field.Label>Lot Number</Field.Label>
+                      <Input value={formData.lotNumber} onChange={(e) => handleInputChange('lotNumber', e.target.value)} />
+                    </Field.Root>
+                  </HStack>
+                  <HStack gap={4} w="full">
+                    <Field.Root flex={1}>
+                      <Field.Label>Date Administered</Field.Label>
+                      <Input type="date" value={formData.administrationDate} onChange={(e) => handleInputChange('administrationDate', e.target.value)} />
+                    </Field.Root>
+                    <Field.Root flex={1}>
+                      <Field.Label>Administered By</Field.Label>
+                      <Input value={formData.administeredBy} onChange={(e) => handleInputChange('administeredBy', e.target.value)} />
+                    </Field.Root>
+                  </HStack>
+                  <Field.Root>
+                    <Field.Label>Facility Name</Field.Label>
+                    <Input value={formData.facilityName} onChange={(e) => handleInputChange('facilityName', e.target.value)} />
+                  </Field.Root>
+                  <Field.Root>
+                    <Field.Label>Facility Address</Field.Label>
+                    <Input value={formData.facilityAddress} onChange={(e) => handleInputChange('facilityAddress', e.target.value)} />
+                  </Field.Root>
+                  <Field.Root>
+                    <Field.Label>Notes</Field.Label>
+                    <Input value={formData.notes} onChange={(e) => handleInputChange('notes', e.target.value)} />
+                  </Field.Root>
+                </VStack>
+              </Dialog.Body>
+              <Dialog.Footer>
+                <Button variant="outline" mr={3} onClick={() => setOpened(false)}>Cancel</Button>
+                <Button colorScheme="blue" onClick={handleSubmit}>Add Record</Button>
+              </Dialog.Footer>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
     </Box>
   );
 };

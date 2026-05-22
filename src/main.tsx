@@ -1,14 +1,13 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { ChakraProvider } from '@chakra-ui/react';
+import system from './theme';
 import App from './App';
-import { MantineProvider } from '@mantine/core';
-import theme from './theme';
-import '@mantine/core/styles.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <MantineProvider theme={theme}>
+    <ChakraProvider value={system}>
       <App />
-    </MantineProvider>
+    </ChakraProvider>
   </StrictMode>
 );

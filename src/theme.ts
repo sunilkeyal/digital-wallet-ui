@@ -1,49 +1,30 @@
-import { createTheme } from '@mantine/core';
+import { createSystem, defaultConfig } from '@chakra-ui/react';
 
-const theme = createTheme({
-  colors: {
-    blue: [
-      '#E3F2FD',
-      '#BBDEFB',
-      '#90CAF9',
-      '#64B5F6',
-      '#42A5F5',
-      '#2196F3', // Primary - 500
-      '#1E88E5',
-      '#1976D2',
-      '#1565C0',
-      '#0D47A1',
-    ],
-  },
-  primaryColor: 'blue',
-  primaryShade: { light: 6, dark: 8 },
-  fontFamily: [
-    '-apple-system',
-    'BlinkMacSystemFont',
-    '"Segoe UI"',
-    'Roboto',
-    '"Helvetica Neue"',
-    'Arial',
-    'sans-serif',
-  ].join(','),
-  defaultRadius: 'md',
-  components: {
-    Button: {
-      styles: {
-        root: {
-          fontWeight: 600,
-          textTransform: 'none',
+const customSystem = createSystem(defaultConfig, {
+  theme: {
+    tokens: {
+      fonts: {
+        heading: { value: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' },
+        body: { value: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' },
+      },
+    },
+    semanticTokens: {
+      colors: {
+        bg: {
+          DEFAULT: { value: { _light: '{colors.white}', _dark: '{colors.gray.900}' } },
+          subtle: { value: { _light: '{colors.gray.50}', _dark: '{colors.gray.800}' } },
+          muted: { value: { _light: '{colors.gray.100}', _dark: '{colors.gray.700}' } },
+          emphasized: { value: { _light: '{colors.gray.200}', _dark: '{colors.gray.600}' } },
+          panel: { value: { _light: '{colors.white}', _dark: '{colors.gray.800}' } },
         },
       },
     },
-    Card: {
-      styles: {
-        root: {
-          borderRadius: '12px',
-        },
-      },
+  },
+  globalCss: {
+    html: {
+      colorPalette: 'teal',
     },
   },
 });
 
-export default theme;
+export default customSystem;
