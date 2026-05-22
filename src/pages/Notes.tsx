@@ -5,6 +5,7 @@ import { Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle, FontSize } from '@tiptap/extension-text-style';
 import { useNotes, type Note, type NoteGroup } from '../context/NoteContext';
+import { noteApi } from '../services/api';
 import { useSearchParams } from 'react-router-dom';
 
 const ToolbarButton = ({ onCommand, active, icon, label, compact }: { onCommand: () => void; active?: boolean; icon: React.ReactNode; label: string; compact?: boolean }) => {
@@ -30,7 +31,28 @@ const findNote = (groups: NoteGroup[], noteId: string): Note | undefined =>
 
 const Notes = () => {
   const { groups, setGroups, recordView, createGroup, renameGroup, removeGroup, createNote, updateNote, removeNote, reorderNotes } = useNotes();
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set(groups.map((g) => g.id)));
+
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem('noteExpandedIds');
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('noteExpandedIds', JSON.stringify([...expandedIds]));
+  }, [expandedIds]);
+
+  useEffect(() => {
+    if (groups.length === 0) return;
+    setExpandedIds((prev) => {
+      const ids = new Set(groups.map((g) => g.id));
+      const next = new Set([...prev].filter((id) => ids.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [groups]);
   const firstNoteId = groups.length > 0 && groups[0].notes.length > 0 ? groups[0].notes[0].id : null;
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(firstNoteId);
   const [editingContent, setEditingContent] = useState(false);
@@ -326,13 +348,21 @@ const Notes = () => {
                           const [removed] = srcNotes.splice(dragState.noteIdx, 1);
                           const targetNotes = dragState.groupId === group.id ? srcNotes : groupNotes;
                           targetNotes.splice(idx, 0, removed);
-                          setGroups((prev) => prev.map((g) => {
+                          const updatedGroups = groups.map((g) => {
                             if (g.id === dragState.groupId && g.id === group.id) return { ...g, notes: targetNotes };
                             if (g.id === dragState.groupId) return { ...g, notes: srcNotes };
                             if (g.id === group.id) return { ...g, notes: targetNotes };
                             return g;
-                          }));
-                          await reorderNotes(group.id, targetNotes.map((n) => n.id));
+                          });
+                          setGroups(updatedGroups);
+                          await noteApi.reorder(group.id, targetNotes.map((n) => n.id));
+                          if (dragState.groupId !== group.id) {
+                            await noteApi.update(moved.id, { groupId: group.id } as any);
+                            const updatedSrc = updatedGroups.find((g) => g.id === dragState.groupId);
+                            if (updatedSrc) {
+                              await noteApi.reorder(dragState.groupId, updatedSrc.notes.map((n) => n.id));
+                            }
+                          }
                           setDragState(null);
                           setDropTarget(null);
                         }}
