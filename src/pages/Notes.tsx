@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
-import { Box, Heading, Text, VStack, HStack, Input, Button, IconButton, Flex, Separator, Tooltip, Portal, Dialog } from '@chakra-ui/react';
-import { IconNotes, IconEdit, IconCheck, IconX, IconBold, IconItalic, IconList, IconListNumbers, IconHeading, IconQuote, IconGripVertical, IconFolder, IconFolderOpen, IconPlus, IconChevronRight, IconChevronDown, IconSortAscending, IconSortDescending, IconFolders, IconArrowsUpDown, IconTrash } from '@tabler/icons-react';
+import { Box, Heading, Text, VStack, HStack, Input, Button, IconButton, Flex, Separator, Tooltip, Portal, Dialog, useBreakpointValue } from '@chakra-ui/react';
+import { IconNotes, IconEdit, IconCheck, IconX, IconBold, IconItalic, IconList, IconListNumbers, IconHeading, IconQuote, IconGripVertical, IconFolder, IconFolderOpen, IconPlus, IconChevronRight, IconChevronDown, IconChevronLeft, IconSortAscending, IconSortDescending, IconFolders, IconArrowsUpDown, IconTrash } from '@tabler/icons-react';
 import { Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle, FontSize } from '@tiptap/extension-text-style';
 import { useNotes, type Note, type NoteGroup } from '../context/NoteContext';
 import { useSearchParams } from 'react-router-dom';
 
-const ToolbarButton = ({ onCommand, active, icon, label }: { onCommand: () => void; active?: boolean; icon: React.ReactNode; label: string }) => {
+const ToolbarButton = ({ onCommand, active, icon, label, compact }: { onCommand: () => void; active?: boolean; icon: React.ReactNode; label: string; compact?: boolean }) => {
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     onCommand();
@@ -15,7 +15,7 @@ const ToolbarButton = ({ onCommand, active, icon, label }: { onCommand: () => vo
   return (
     <IconButton
       aria-label={label}
-      size="sm"
+      size={compact ? 'xs' : 'sm'}
       variant={active ? 'solid' : 'ghost'}
       colorPalette={active ? 'teal' : 'gray'}
       onMouseDown={handleMouseDown}
@@ -47,6 +47,8 @@ const Notes = () => {
   const editorRef = useRef<Editor | null>(null);
   const editorElRef = useRef<HTMLDivElement>(null);
 
+  const isMobile = useBreakpointValue({ base: true, md: false });
+  const [showDetail, setShowDetail] = useState(false);
   const [searchParams] = useSearchParams();
 
   const selected = findNote(groups, selectedNoteId);
@@ -55,8 +57,17 @@ const Notes = () => {
     const noteId = searchParams.get('noteId');
     if (noteId && findNote(groups, noteId)) {
       setSelectedNoteId(noteId);
+      setShowDetail(true);
     }
   }, []);
+
+  const handleSelectNote = (noteId: string) => {
+    setSelectedNoteId(noteId);
+    setEditingContent(false);
+    setEditingTitle(false);
+    recordView(noteId);
+    if (isMobile) setShowDetail(true);
+  };
 
   useEffect(() => {
     if (!editingContent || !selected) {
@@ -192,8 +203,9 @@ const Notes = () => {
         </Box>
       </Flex>
 
-      <Flex gap={4} h="calc(100vh - 220px)" minH="400px">
-        <VStack w="300px" flexShrink={0} gap={3} align="stretch" overflowY="auto" pr={2}>
+      <Flex gap={4} h={{ base: 'calc(100vh - 160px)', md: 'calc(100vh - 220px)' }} minH="400px" direction={{ base: 'column', md: 'row' }}>
+        {(!isMobile || !showDetail) && (
+        <VStack w={{ base: '100%', md: '300px' }} flexShrink={0} gap={3} align="stretch" overflowY="auto" pr={2}>
           <HStack gap={1}>
             <Tooltip.Root openDelay={200}>
               <Tooltip.Trigger asChild>
@@ -299,7 +311,7 @@ const Notes = () => {
                             : selectedNoteId === note.id ? 'colorPalette.border' : 'transparent'
                         }
                         opacity={dragState?.groupId === group.id && dragState?.noteIdx === idx ? 0.4 : 1}
-                        onClick={() => { setSelectedNoteId(note.id); setEditingContent(false); setEditingTitle(false); recordView(note.id); }}
+                        onClick={() => handleSelectNote(note.id)}
                         onDragStart={() => setDragState({ groupId: group.id, noteIdx: idx })}
                         onDragOver={(e) => { e.preventDefault(); setDropTarget({ groupId: group.id, noteIdx: idx }); }}
                         onDragEnd={() => { setDragState(null); setDropTarget(null); }}
@@ -330,23 +342,23 @@ const Notes = () => {
                           <IconGripVertical size={12} style={{ cursor: 'grab', flexShrink: 0, opacity: 0.3 }} />
                           <Text fontSize="xs" noOfLines={1} flex={1}>{note.title}</Text>
                           <Box
-            as="button"
-            aria-label="Delete note"
-            className="note-delete-btn"
-            onClick={(e) => { e.stopPropagation(); deleteNote(note.id); }}
-            display="inline-flex"
-            alignItems="center"
-            justifyContent="center"
-            border="none"
-            bg="transparent"
-            color="red.500"
-            cursor="pointer"
-            p={0.5}
-            rounded="sm"
-            _hover={{ bg: 'red.50' }}
-          >
-            <IconTrash size={10} />
-          </Box>
+                            as="button"
+                            aria-label="Delete note"
+                            className="note-delete-btn"
+                            onClick={(e) => { e.stopPropagation(); deleteNote(note.id); }}
+                            display="inline-flex"
+                            alignItems="center"
+                            justifyContent="center"
+                            border="none"
+                            bg="transparent"
+                            color="red.500"
+                            cursor="pointer"
+                            p={0.5}
+                            rounded="sm"
+                            _hover={{ bg: 'red.50' }}
+                          >
+                            <IconTrash size={10} />
+                          </Box>
                         </Flex>
                       </Box>
                     ))}
@@ -356,18 +368,26 @@ const Notes = () => {
             );
           })}
         </VStack>
-
-        <Box flex={1} p={4} rounded="md" border="1px solid" borderColor="border" bg="bg.panel" overflowY="auto">
+        )}
+        {(!isMobile || showDetail) && (
+        <Box flex={1} p={{ base: 3, md: 4 }} rounded="md" border="1px solid" borderColor="border" bg="bg.panel" overflowY="auto">
+          {isMobile && selected && (
+            <HStack mb={3}>
+              <IconButton aria-label="Back to list" size="sm" variant="ghost" onClick={() => setShowDetail(false)}>
+                <IconChevronLeft size={18} />
+              </IconButton>
+            </HStack>
+          )}
           {selected ? (
             <>
-              <HStack mb={4}>
-                <Box p={2} rounded="lg" bg="colorPalette.subtle" color="colorPalette.fg">
-                  <IconNotes size={20} />
+              <HStack mb={3} gap={2}>
+                <Box p={2} rounded="lg" bg="colorPalette.subtle" color="colorPalette.fg" flexShrink={0}>
+                  <IconNotes size={isMobile ? 16 : 20} />
                 </Box>
                 {editingTitle ? (
                   <HStack flex={1} gap={2}>
                     <Input
-                      size="sm"
+                      size={isMobile ? 'xs' : 'sm'}
                       value={draftTitle}
                       onChange={(e) => setDraftTitle(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') saveTitle(); if (e.key === 'Escape') cancelEditTitle(); }}
@@ -377,19 +397,19 @@ const Notes = () => {
                     <IconButton aria-label="Cancel" size="xs" variant="ghost" onClick={cancelEditTitle}><IconX size={14} /></IconButton>
                   </HStack>
                 ) : (
-                  <HStack flex={1}>
-                    <Heading as="h2" size="md">{selected.title}</Heading>
+                  <HStack flex={1} minW={0}>
+                    <Heading as="h2" size={isMobile ? 'sm' : 'md'} noOfLines={2}>{selected.title}</Heading>
                     <IconButton aria-label="Rename note" size="xs" variant="ghost" onClick={startEditTitle}><IconEdit size={14} /></IconButton>
                   </HStack>
                 )}
               </HStack>
 
-              <Text color="gray.500" fontSize="xs" mb={4}>
+              <Text color="gray.500" fontSize={{ base: '2xs', md: 'xs' }} mb={3}>
                 Created: {selected.createdAt} &middot; Updated: {selected.updatedAt}
               </Text>
 
               {editingContent ? (
-                <VStack gap={3} align="stretch">
+                <VStack gap={2} align="stretch">
                   <HStack gap={1} wrap="wrap">
                     <select
                       value={editorRef.current?.getAttributes('textStyle').fontSize || ''}
@@ -411,39 +431,45 @@ const Notes = () => {
                     </select>
                     <ToolbarButton
                       label="Bold"
-                      icon={<IconBold size={16} />}
+                      icon={isMobile ? <IconBold size={14} /> : <IconBold size={16} />}
                       active={editorRef.current?.isActive('bold')}
                       onCommand={() => editorRef.current?.chain().focus().toggleBold().run()}
+                      compact={isMobile}
                     />
                     <ToolbarButton
                       label="Italic"
-                      icon={<IconItalic size={16} />}
+                      icon={isMobile ? <IconItalic size={14} /> : <IconItalic size={16} />}
                       active={editorRef.current?.isActive('italic')}
                       onCommand={() => editorRef.current?.chain().focus().toggleItalic().run()}
+                      compact={isMobile}
                     />
                     <ToolbarButton
                       label="Heading"
-                      icon={<IconHeading size={16} />}
+                      icon={isMobile ? <IconHeading size={14} /> : <IconHeading size={16} />}
                       active={editorRef.current?.isActive('heading', { level: 3 })}
                       onCommand={() => editorRef.current?.chain().focus().toggleHeading({ level: 3 }).run()}
+                      compact={isMobile}
                     />
                     <ToolbarButton
                       label="Bullet List"
-                      icon={<IconList size={16} />}
+                      icon={isMobile ? <IconList size={14} /> : <IconList size={16} />}
                       active={editorRef.current?.isActive('bulletList')}
                       onCommand={() => editorRef.current?.chain().focus().toggleBulletList().run()}
+                      compact={isMobile}
                     />
                     <ToolbarButton
                       label="Ordered List"
-                      icon={<IconListNumbers size={16} />}
+                      icon={isMobile ? <IconListNumbers size={14} /> : <IconListNumbers size={16} />}
                       active={editorRef.current?.isActive('orderedList')}
                       onCommand={() => editorRef.current?.chain().focus().toggleOrderedList().run()}
+                      compact={isMobile}
                     />
                     <ToolbarButton
                       label="Blockquote"
-                      icon={<IconQuote size={16} />}
+                      icon={isMobile ? <IconQuote size={14} /> : <IconQuote size={16} />}
                       active={editorRef.current?.isActive('blockquote')}
                       onCommand={() => editorRef.current?.chain().focus().toggleBlockquote().run()}
+                      compact={isMobile}
                     />
                   </HStack>
                   <Separator />
@@ -453,16 +479,16 @@ const Notes = () => {
                     borderWidth="1px"
                     borderColor="border"
                     rounded="md"
-                    px={3}
+                    px={{ base: 2, md: 3 }}
                     py={2}
-                    minH="200px"
+                    minH={{ base: '120px', md: '200px' }}
                     css={{
-                      '& .ProseMirror': { outline: 'none', minH: '180px' },
+                      '& .ProseMirror': { outline: 'none', minH: isMobile ? '100px' : '180px' },
                     }}
                   />
                   <HStack gap={2}>
-                    <Button size="sm" colorPalette="teal" onClick={saveContent}><IconCheck size={14} /><Box ml={1}>Save</Box></Button>
-                    <Button size="sm" variant="ghost" onClick={cancelEditContent}><IconX size={14} /><Box ml={1}>Cancel</Box></Button>
+                    <Button size={isMobile ? 'xs' : 'sm'} colorPalette="teal" onClick={saveContent}><IconCheck size={14} /><Box ml={1}>Save</Box></Button>
+                    <Button size={isMobile ? 'xs' : 'sm'} variant="ghost" onClick={cancelEditContent}><IconX size={14} /><Box ml={1}>Cancel</Box></Button>
                   </HStack>
                 </VStack>
               ) : (
@@ -482,14 +508,15 @@ const Notes = () => {
                     }}
                     dangerouslySetInnerHTML={{ __html: selected.content }}
                   />
-                  <Button size="sm" mt={4} colorPalette="teal" onClick={startEditContent}><IconEdit size={14} /><Box ml={1}>Edit</Box></Button>
+                  <Button size={isMobile ? 'xs' : 'sm'} mt={4} colorPalette="teal" onClick={startEditContent}><IconEdit size={14} /><Box ml={1}>Edit</Box></Button>
                 </Box>
               )}
             </>
           ) : (
-            <Text color="gray.500">Select a note to view its details.</Text>
+            <Text color="gray.500" fontSize={isMobile ? 'sm' : undefined}>Select a note to view its details.</Text>
           )}
         </Box>
+        )}
       </Flex>
 
       <Dialog.Root open={!!deleteConfirm} onOpenChange={(e) => { if (!e.open) setDeleteConfirm(null); }}>
