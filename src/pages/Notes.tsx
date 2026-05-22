@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { Box, Heading, Text, VStack, HStack, Input, Button, IconButton, Flex, Separator, Tooltip, Portal, Dialog, useBreakpointValue } from '@chakra-ui/react';
-import { IconNotes, IconEdit, IconCheck, IconX, IconBold, IconItalic, IconList, IconListNumbers, IconHeading, IconQuote, IconGripVertical, IconFolder, IconFolderOpen, IconPlus, IconChevronRight, IconChevronDown, IconChevronLeft, IconSortAscending, IconSortDescending, IconFolders, IconArrowsUpDown, IconTrash } from '@tabler/icons-react';
+import { IconNotes, IconEdit, IconCheck, IconX, IconBold, IconItalic, IconList, IconListNumbers, IconHeading, IconQuote, IconGripVertical, IconFolder, IconFolderOpen, IconPlus, IconChevronRight, IconChevronDown, IconChevronLeft, IconSortAscending, IconSortDescending, IconFolders, IconTrash } from '@tabler/icons-react';
 import { Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle, FontSize } from '@tiptap/extension-text-style';
 import { useNotes, type Note, type NoteGroup } from '../context/NoteContext';
-import { noteApi } from '../services/api';
+import { noteApi, noteGroupApi } from '../services/api';
 import { useSearchParams } from 'react-router-dom';
 
 const ToolbarButton = ({ onCommand, active, icon, label, compact }: { onCommand: () => void; active?: boolean; icon: React.ReactNode; label: string; compact?: boolean }) => {
@@ -14,15 +14,20 @@ const ToolbarButton = ({ onCommand, active, icon, label, compact }: { onCommand:
     onCommand();
   };
   return (
-    <IconButton
-      aria-label={label}
-      size={compact ? 'xs' : 'sm'}
-      variant={active ? 'solid' : 'ghost'}
-      colorPalette={active ? 'teal' : 'gray'}
-      onMouseDown={handleMouseDown}
-    >
-      {icon}
-    </IconButton>
+    <Tooltip.Root openDelay={200}>
+      <Tooltip.Trigger asChild>
+        <IconButton
+          aria-label={label}
+          size={compact ? 'xs' : 'sm'}
+          variant={active ? 'solid' : 'ghost'}
+          colorPalette={active ? 'teal' : 'gray'}
+          onMouseDown={handleMouseDown}
+        >
+          {icon}
+        </IconButton>
+      </Tooltip.Trigger>
+      <Portal><Tooltip.Positioner><Tooltip.Content>{label}</Tooltip.Content></Tooltip.Positioner></Portal>
+    </Tooltip.Root>
   );
 };
 
@@ -53,6 +58,17 @@ const Notes = () => {
       return next.size === prev.size ? prev : next;
     });
   }, [groups]);
+
+  const [groupSortDir, setGroupSortDir] = useState<'asc' | 'desc'>(() => {
+    try { return (localStorage.getItem('noteGroupSortDir') as 'asc' | 'desc') || 'asc'; } catch { return 'asc'; }
+  });
+  const [noteSortDir, setNoteSortDir] = useState<Record<string, 'asc' | 'desc'>>(() => {
+    try { const s = localStorage.getItem('noteSortDir'); return s ? JSON.parse(s) : {}; } catch { return {}; }
+  });
+
+  useEffect(() => { localStorage.setItem('noteGroupSortDir', groupSortDir); }, [groupSortDir]);
+  useEffect(() => { localStorage.setItem('noteSortDir', JSON.stringify(noteSortDir)); }, [noteSortDir]);
+
   const firstNoteId = groups.length > 0 && groups[0].notes.length > 0 ? groups[0].notes[0].id : null;
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(firstNoteId);
   const [editingContent, setEditingContent] = useState(false);
@@ -61,8 +77,6 @@ const Notes = () => {
   const [draftTitle, setDraftTitle] = useState('');
   const [draftGroupName, setDraftGroupName] = useState('');
   const [, setVersion] = useState(0);
-  const [groupSortDir, setGroupSortDir] = useState<'asc' | 'desc'>('asc');
-  const [noteSortDir, setNoteSortDir] = useState<Record<string, 'asc' | 'desc'>>({});
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'group' | 'note'; id: string; name: string } | null>(null);
   const [dragState, setDragState] = useState<{ groupId: string; noteIdx: number } | null>(null);
   const [dropTarget, setDropTarget] = useState<{ groupId: string; noteIdx: number } | null>(null);
@@ -237,12 +251,11 @@ const Notes = () => {
             </Tooltip.Root>
             <Tooltip.Root openDelay={200}>
               <Tooltip.Trigger asChild>
-                <IconButton aria-label="Sort Groups" size="sm" variant="ghost" onClick={() => {
-                  setGroups((prev) => {
-                    const sorted = [...prev].sort((a, b) => groupSortDir === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name));
-                    return sorted;
-                  });
+                <IconButton aria-label="Sort Groups" size="sm" variant="ghost" onClick={async () => {
+                  const sorted = [...groups].sort((a, b) => groupSortDir === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name));
+                  setGroups(sorted);
                   setGroupSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+                  await noteGroupApi.reorder(sorted.map((g) => g.id));
                 }}>
                   {groupSortDir === 'asc' ? <IconSortAscending size={16} /> : <IconSortDescending size={16} />}
                 </IconButton>
@@ -283,28 +296,55 @@ const Notes = () => {
                         onKeyDown={(e) => { if (e.key === 'Enter') saveGroupName(); if (e.key === 'Escape') cancelEditGroupName(); }}
                         autoFocus
                       />
-                      <IconButton aria-label="Save" size="xs" colorPalette="teal" onClick={saveGroupName}><IconCheck size={12} /></IconButton>
-                      <IconButton aria-label="Cancel" size="xs" variant="ghost" onClick={cancelEditGroupName}><IconX size={12} /></IconButton>
+                      <Tooltip.Root openDelay={200}>
+                        <Tooltip.Trigger asChild>
+                          <IconButton aria-label="Save" size="xs" colorPalette="teal" onClick={saveGroupName}><IconCheck size={12} /></IconButton>
+                        </Tooltip.Trigger>
+                        <Portal><Tooltip.Positioner><Tooltip.Content>Save</Tooltip.Content></Tooltip.Positioner></Portal>
+                      </Tooltip.Root>
+                      <Tooltip.Root openDelay={200}>
+                        <Tooltip.Trigger asChild>
+                          <IconButton aria-label="Cancel" size="xs" variant="ghost" onClick={cancelEditGroupName}><IconX size={12} /></IconButton>
+                        </Tooltip.Trigger>
+                        <Portal><Tooltip.Positioner><Tooltip.Content>Cancel</Tooltip.Content></Tooltip.Positioner></Portal>
+                      </Tooltip.Root>
                     </HStack>
                   ) : (
                     <HStack flex={1}>
                       <Text fontWeight="semibold" fontSize="sm" flex={1}>{group.name}</Text>
-                      <IconButton aria-label="Rename" size="2xs" variant="ghost" onClick={(e) => { e.stopPropagation(); startEditGroupName(group.id, group.name); }}><IconEdit size={12} /></IconButton>
-                      <IconButton aria-label="Delete group" size="2xs" variant="ghost" colorPalette="red" onClick={(e) => { e.stopPropagation(); deleteGroup(group.id); }}><IconTrash size={12} /></IconButton>
+                      <Tooltip.Root openDelay={200}>
+                        <Tooltip.Trigger asChild>
+                          <IconButton aria-label="Rename" size="2xs" variant="ghost" onClick={(e) => { e.stopPropagation(); startEditGroupName(group.id, group.name); }}><IconEdit size={12} /></IconButton>
+                        </Tooltip.Trigger>
+                        <Portal><Tooltip.Positioner><Tooltip.Content>Rename</Tooltip.Content></Tooltip.Positioner></Portal>
+                      </Tooltip.Root>
+                      <Tooltip.Root openDelay={200}>
+                        <Tooltip.Trigger asChild>
+                          <IconButton aria-label="Delete group" size="2xs" variant="ghost" colorPalette="red" onClick={(e) => { e.stopPropagation(); deleteGroup(group.id); }}><IconTrash size={12} /></IconButton>
+                        </Tooltip.Trigger>
+                        <Portal><Tooltip.Positioner><Tooltip.Content>Delete Group</Tooltip.Content></Tooltip.Positioner></Portal>
+                      </Tooltip.Root>
                     </HStack>
                   )}
-                  <IconButton aria-label="Add note" size="2xs" variant="ghost" onClick={(e) => { e.stopPropagation(); addNote(group.id); }}><IconPlus size={12} /></IconButton>
                   <Tooltip.Root openDelay={200}>
                     <Tooltip.Trigger asChild>
-                      <IconButton aria-label="Sort notes" size="2xs" variant="ghost" onClick={(e) => {
+                      <IconButton aria-label="Add note" size="2xs" variant="ghost" onClick={(e) => { e.stopPropagation(); addNote(group.id); }}><IconPlus size={12} /></IconButton>
+                    </Tooltip.Trigger>
+                    <Portal><Tooltip.Positioner><Tooltip.Content>Add Note</Tooltip.Content></Tooltip.Positioner></Portal>
+                  </Tooltip.Root>
+                  <Tooltip.Root openDelay={200}>
+                    <Tooltip.Trigger asChild>
+                        <IconButton aria-label="Sort notes" size="2xs" variant="ghost" onClick={async (e) => {
                         e.stopPropagation();
                         const dir = noteSortDir[group.id] || 'asc';
                         setNoteSortDir((prev) => ({ ...prev, [group.id]: dir === 'asc' ? 'desc' : 'asc' }));
+                        const sorted = [...group.notes].sort((a, b) => dir === 'asc' ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title));
                         setGroups((prev) => prev.map((g) =>
-                          g.id === group.id ? { ...g, notes: [...g.notes].sort((a, b) => dir === 'asc' ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title)) } : g
+                          g.id === group.id ? { ...g, notes: sorted } : g
                         ));
+                        await noteApi.reorder(group.id, sorted.map((n) => n.id));
                       }}>
-                        <IconArrowsUpDown size={12} />
+                        {(noteSortDir[group.id] || 'asc') === 'asc' ? <IconSortAscending size={12} /> : <IconSortDescending size={12} />}
                       </IconButton>
                     </Tooltip.Trigger>
                     <Portal><Tooltip.Positioner><Tooltip.Content>Sort {(noteSortDir[group.id] || 'asc') === 'asc' ? 'A-Z' : 'Z-A'}</Tooltip.Content></Tooltip.Positioner></Portal>
@@ -403,9 +443,14 @@ const Notes = () => {
         <Box flex={1} p={{ base: 3, md: 4 }} rounded="md" border="1px solid" borderColor="border" bg="bg.panel" overflowY="auto">
           {isMobile && selected && (
             <HStack mb={3}>
-              <IconButton aria-label="Back to list" size="sm" variant="ghost" onClick={() => setShowDetail(false)}>
-                <IconChevronLeft size={18} />
-              </IconButton>
+              <Tooltip.Root openDelay={200}>
+                <Tooltip.Trigger asChild>
+                  <IconButton aria-label="Back to list" size="sm" variant="ghost" onClick={() => setShowDetail(false)}>
+                    <IconChevronLeft size={18} />
+                  </IconButton>
+                </Tooltip.Trigger>
+                <Portal><Tooltip.Positioner><Tooltip.Content>Back to List</Tooltip.Content></Tooltip.Positioner></Portal>
+              </Tooltip.Root>
             </HStack>
           )}
           {selected ? (
@@ -423,13 +468,28 @@ const Notes = () => {
                       onKeyDown={(e) => { if (e.key === 'Enter') saveTitle(); if (e.key === 'Escape') cancelEditTitle(); }}
                       autoFocus
                     />
-                    <IconButton aria-label="Save title" size="xs" colorPalette="teal" onClick={saveTitle}><IconCheck size={14} /></IconButton>
-                    <IconButton aria-label="Cancel" size="xs" variant="ghost" onClick={cancelEditTitle}><IconX size={14} /></IconButton>
+                    <Tooltip.Root openDelay={200}>
+                      <Tooltip.Trigger asChild>
+                        <IconButton aria-label="Save title" size="xs" colorPalette="teal" onClick={saveTitle}><IconCheck size={14} /></IconButton>
+                      </Tooltip.Trigger>
+                      <Portal><Tooltip.Positioner><Tooltip.Content>Save</Tooltip.Content></Tooltip.Positioner></Portal>
+                    </Tooltip.Root>
+                    <Tooltip.Root openDelay={200}>
+                      <Tooltip.Trigger asChild>
+                        <IconButton aria-label="Cancel" size="xs" variant="ghost" onClick={cancelEditTitle}><IconX size={14} /></IconButton>
+                      </Tooltip.Trigger>
+                      <Portal><Tooltip.Positioner><Tooltip.Content>Cancel</Tooltip.Content></Tooltip.Positioner></Portal>
+                    </Tooltip.Root>
                   </HStack>
                 ) : (
                   <HStack flex={1} minW={0}>
                     <Heading as="h2" size={isMobile ? 'sm' : 'md'} noOfLines={2}>{selected.title}</Heading>
-                    <IconButton aria-label="Rename note" size="xs" variant="ghost" onClick={startEditTitle}><IconEdit size={14} /></IconButton>
+                    <Tooltip.Root openDelay={200}>
+                      <Tooltip.Trigger asChild>
+                        <IconButton aria-label="Rename note" size="xs" variant="ghost" onClick={startEditTitle}><IconEdit size={14} /></IconButton>
+                      </Tooltip.Trigger>
+                      <Portal><Tooltip.Positioner><Tooltip.Content>Rename</Tooltip.Content></Tooltip.Positioner></Portal>
+                    </Tooltip.Root>
                   </HStack>
                 )}
               </HStack>

@@ -82,6 +82,8 @@ export const noteGroupApi = {
     api.put(`/note-groups/${id}`, data),
   delete: (id: string): Promise<{ data: void }> =>
     api.delete(`/note-groups/${id}`),
+  reorder: (groupIds: string[]): Promise<{ data: void }> =>
+    api.put('/note-groups/reorder', { groupIds }),
 };
 
 export const noteApi = {

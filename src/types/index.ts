@@ -105,6 +105,7 @@ export interface NoteGroupDto {
   id?: string;
   userId?: string;
   name: string;
+  orderIndex?: number;
   notes?: NoteDto[];
   createdAt?: string;
   updatedAt?: string;
