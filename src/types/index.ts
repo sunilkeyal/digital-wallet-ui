@@ -10,6 +10,7 @@ export interface ImmunizationDto {
   id?: string;
   userId?: string;
   vaccineName: string;
+  patientName?: string;
   manufacturer: string;
   lotNumber: string;
   administrationDate: string;
