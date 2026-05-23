@@ -27,6 +27,7 @@ const Admin = () => {
   const [restoreStatus, setRestoreStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [restoreWarnOpen, setRestoreWarnOpen] = useState(false);
   const [pendingRestoreFile, setPendingRestoreFile] = useState<File | null>(null);
+  const [restoreTypes, setRestoreTypes] = useState<string[]>([]);
   const [backupError, setBackupError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -134,10 +135,26 @@ const Admin = () => {
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setPendingRestoreFile(file);
+    setRestoreTypes([]);
+    if (file.name.endsWith('.zip')) {
+      try {
+        const JSZip = (await import('jszip')).default;
+        const zip = await JSZip.loadAsync(file);
+        const types = Object.keys(zip.files)
+          .filter((name) => name.endsWith('.dwallet'))
+          .map((name) => name.replace(/-.*\.dwallet$/, ''));
+        setRestoreTypes(types);
+      } catch {
+        setRestoreStatus({ type: 'error', message: 'Unable to read archive.' });
+        setPendingRestoreFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        return;
+      }
+    }
     setRestoreWarnOpen(true);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -167,6 +184,7 @@ const Admin = () => {
         setRestoreStatus({ type: 'success', message: response.data.message });
       }
       setPendingRestoreFile(null);
+      setRestoreTypes([]);
     } catch (err: any) {
       const msg = err.response?.data?.error || 'Restore failed. Please check the backup file.';
       setRestoreStatus({ type: 'error', message: msg });
@@ -433,7 +451,7 @@ const Admin = () => {
             </Card.Root>
           </Flex>
 
-          <Dialog.Root open={restoreWarnOpen} onOpenChange={(e) => { if (!e.open) setRestoreWarnOpen(false); }}>
+          <Dialog.Root open={restoreWarnOpen} onOpenChange={(e) => { if (!e.open) { setRestoreWarnOpen(false); setRestoreTypes([]); } }}>
             <Portal>
               <Dialog.Backdrop />
               <Dialog.Positioner>
@@ -443,10 +461,16 @@ const Admin = () => {
                   </Dialog.Header>
                   <Dialog.Body>
                     <Text mb={3}>
-                      Restoring from a backup will <strong>permanently delete all existing records</strong>
-                      and replace them with the data from the backup archive. All backup files found
-                      in the archive will be processed. This action cannot be undone.
+                      Restoring from a backup will <strong>permanently delete all existing records</strong> and replace them with the data from the backup archive. This action cannot be undone.
                     </Text>
+                    {restoreTypes.length > 0 && (
+                      <Text mb={3}>
+                        The following data types will be restored:
+                        <Text as="span" fontWeight="semibold" display="block" mt={1}>
+                          {restoreTypes.join(', ')}
+                        </Text>
+                      </Text>
+                    )}
                     <Alert.Root status="error">
                       <Alert.Content>
                         Are you sure you want to proceed with the restore?
@@ -454,7 +478,7 @@ const Admin = () => {
                     </Alert.Root>
                   </Dialog.Body>
                   <Dialog.Footer>
-                    <Button variant="ghost" mr={3} onClick={() => { setRestoreWarnOpen(false); setPendingRestoreFile(null); }}>Cancel</Button>
+                    <Button variant="ghost" mr={3} onClick={() => { setRestoreWarnOpen(false); setPendingRestoreFile(null); setRestoreTypes([]); }}>Cancel</Button>
                     <Button colorPalette="red" onClick={handleRestore}>Restore</Button>
                   </Dialog.Footer>
                 </Dialog.Content>
