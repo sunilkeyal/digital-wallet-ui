@@ -71,6 +71,15 @@ export const authApi = {
     api.delete(`/admin/users/${id}`),
   seedData: (userId: string): Promise<{ data: { message: string } }> =>
     api.post('/admin/seed', { userId }),
+  backup: (types: string[]): Promise<{ data: Blob }> =>
+    api.post('/admin/backup', { types }, { responseType: 'blob' }),
+  restore: (file: File): Promise<{ data: { message: string } }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/admin/restore', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
 };
 
 export const noteGroupApi = {
