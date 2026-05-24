@@ -30,6 +30,15 @@ export const immunizationApi = {
     api.put(`/immunizations/${id}`, data),
   delete: (id: string): Promise<{ data: void }> =>
     api.delete(`/immunizations/${id}`),
+  ocr: (file: File): Promise<{ data: { records: ImmunizationDto[]; count: number } }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/immunizations/ocr', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  saveOcrRecords: (records: ImmunizationDto[]): Promise<{ data: { records: ImmunizationDto[]; count: number } }> =>
+    api.post('/immunizations/ocr/save', records),
 };
 
 export const insuranceCardApi = {

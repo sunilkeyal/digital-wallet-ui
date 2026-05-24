@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Box, Heading, Text, VStack, HStack, Input, Button, IconButton, Flex, Separator, Tooltip, Portal, Dialog, useBreakpointValue } from '@chakra-ui/react';
 import { IconNotes, IconEdit, IconCheck, IconX, IconBold, IconItalic, IconList, IconListNumbers, IconHeading, IconQuote, IconGripVertical, IconFolder, IconFolderOpen, IconPlus, IconChevronRight, IconChevronDown, IconChevronLeft, IconSortAscending, IconSortDescending, IconFolders, IconTrash } from '@tabler/icons-react';
+import { formatDate } from '../utils/format';
 import { Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle, FontSize } from '@tiptap/extension-text-style';
@@ -495,7 +496,7 @@ const Notes = () => {
               </HStack>
 
               <Text color="gray.500" fontSize={{ base: '2xs', md: 'xs' }} mb={3}>
-                Created: {selected.createdAt} &middot; Updated: {selected.updatedAt}
+                Created: {formatDate(selected.createdAt)} &middot; Updated: {formatDate(selected.updatedAt)}
               </Text>
 
               {editingContent ? (

@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { IconPlus, IconTrash, IconArrowUp, IconArrowDown } from '@tabler/icons-react';
 import { insuranceCardApi } from '../services/api';
 import type { InsuranceCardDto, PageResponse } from '../types';
+import { formatDate } from '../utils/format';
 import {
   Box, Button, Heading, Text, Table, Dialog, Field, Input,
-  NativeSelect, Alert, HStack, VStack, IconButton, Portal, Spinner, Center,
+  NativeSelect, Alert, HStack, VStack, IconButton, Portal, Spinner, Center, Pagination,
 } from '@chakra-ui/react';
 
 const PAGE_SIZE_OPTIONS = ['10', '20', '50', '100', 'ALL'];
@@ -53,8 +54,6 @@ const InsuranceCards = () => {
 
   const handleInputChange = (field: string, value: string) =>
     setFormData((prev) => ({ ...prev, [field]: value }));
-
-  const handlePageChange = (p: number) => setPage(p);
 
   const handleSizeChange = (value: string) => {
     setSize(value === 'ALL' ? 1000 : Number(value));
@@ -126,8 +125,8 @@ const InsuranceCards = () => {
                 <Table.Cell fontWeight="medium">{card.provider}</Table.Cell>
                 <Table.Cell>{card.policyNumber}</Table.Cell>
                 <Table.Cell>{card.memberName}</Table.Cell>
-                <Table.Cell>{card.effectiveDate}</Table.Cell>
-                <Table.Cell>{card.expiryDate}</Table.Cell>
+                <Table.Cell>{formatDate(card.effectiveDate)}</Table.Cell>
+                <Table.Cell>{formatDate(card.expiryDate)}</Table.Cell>
                 <Table.Cell>
                   <IconButton aria-label="Delete" colorPalette="red" variant="ghost" size="sm" onClick={() => handleDelete(card.id!)}>
                     <IconTrash size={16} />
@@ -147,12 +146,13 @@ const InsuranceCards = () => {
           <HStack justify="space-between" wrap="wrap" gap={3}>
             <HStack gap={2}>
               <Text fontSize="sm" color="gray.500">Rows per page:</Text>
-              <NativeSelect.Root size="sm" w="70px">
+              <NativeSelect.Root size="sm" w="auto">
                 <NativeSelect.Field value={size === 1000 ? 'ALL' : String(size)} onChange={(e) => handleSizeChange(e.target.value)}>
                   {PAGE_SIZE_OPTIONS.map((opt) => (
                     <option key={opt} value={opt}>{opt}</option>
                   ))}
                 </NativeSelect.Field>
+                <NativeSelect.Indicator />
               </NativeSelect.Root>
             </HStack>
             <HStack gap={3}>
@@ -162,11 +162,22 @@ const InsuranceCards = () => {
                   : `Showing ${(page - 1) * size + 1}-${Math.min(page * size, totalElements)} of ${totalElements}`}
               </Text>
               {isPaginated && totalPages > 1 && (
-                <HStack gap={1}>
-                  <Button size="xs" variant="outline" disabled={page <= 1} onClick={() => handlePageChange(page - 1)}>Prev</Button>
-                  <Text fontSize="sm" px={2}>{page} of {totalPages}</Text>
-                  <Button size="xs" variant="outline" disabled={page >= totalPages} onClick={() => handlePageChange(page + 1)}>Next</Button>
-                </HStack>
+                <Pagination.Root
+                  count={totalElements}
+                  pageSize={size}
+                  page={page}
+                  onPageChange={(e) => setPage(e.page)}
+                >
+                  <HStack gap={1}>
+                    <Pagination.PrevTrigger asChild>
+                      <Button size="xs" variant="outline">Prev</Button>
+                    </Pagination.PrevTrigger>
+                    <Pagination.PageText format="compact" />
+                    <Pagination.NextTrigger asChild>
+                      <Button size="xs" variant="outline">Next</Button>
+                    </Pagination.NextTrigger>
+                  </HStack>
+                </Pagination.Root>
               )}
             </HStack>
           </HStack>
