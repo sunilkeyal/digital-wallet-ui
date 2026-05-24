@@ -19,13 +19,9 @@ const Immunizations = () => {
   const [size, setSize] = useState(10);
   const [sortBy, setSortBy] = useState('vaccineName');
   const [sortDir, setSortDir] = useState('asc');
-  const [totalElements, setTotalElements] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [isPaginated, setIsPaginated] = useState(true);
   const [patientFilter, setPatientFilter] = useState(() => {
     try { return localStorage.getItem('immunizationPatientFilter') || ''; } catch { return ''; }
   });
-  const [allPatientNames, setAllPatientNames] = useState<string[]>([]);
   const [formData, setFormData] = useState<ImmunizationDto>({
     vaccineName: '', patientName: '', tradeName: '', administrationDate: '',
     administeredBy: '', facilityName: '', facilityAddress: '', notes: '',
@@ -37,8 +33,8 @@ const Immunizations = () => {
   const [ocrSaved, setOcrSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const fetchSize = patientFilter ? 1000 : size;
-  const fetchPage = patientFilter ? 0 : page - 1;
+  const fetchSize = 1000;
+  const fetchPage = 0;
 
   const fetchImmunizations = useCallback(async () => {
     try {
@@ -47,14 +43,9 @@ const Immunizations = () => {
       const data = response.data;
       if (Array.isArray(data)) {
         setImmunizations(data);
-        setTotalElements(data.length);
-        setIsPaginated(false);
       } else {
         const pageData = data as PageResponse<ImmunizationDto>;
         setImmunizations(pageData.content || []);
-        setTotalElements(pageData.totalElements || 0);
-        setTotalPages(pageData.totalPages || 0);
-        setIsPaginated(true);
       }
     } catch {
       setError('Failed to load immunizations');
@@ -67,27 +58,12 @@ const Immunizations = () => {
 
   useEffect(() => { localStorage.setItem('immunizationPatientFilter', patientFilter); }, [patientFilter]);
 
-  useEffect(() => {
-    immunizationApi.getAll(0, 1000, 'patientName', 'asc')
-      .then((res) => {
-        const data = res.data;
-        const items = Array.isArray(data) ? data : (data as PageResponse<ImmunizationDto>).content;
-        const names = [...new Set(items.map((i: ImmunizationDto) => i.patientName).filter(Boolean))].sort();
-        setAllPatientNames(names);
-      })
-      .catch(() => {});
-  }, []);
-
-  const patientNames = allPatientNames;
+  const patientNames = [...new Set(immunizations.map((i) => i.patientName).filter(Boolean))].sort();
   const displayedImmunizations = patientFilter
     ? immunizations.filter((i) => i.patientName === patientFilter)
     : immunizations;
-  const localTotalPages = patientFilter && isPaginated
-    ? Math.ceil(displayedImmunizations.length / size) || 1
-    : totalPages;
-  const pagedImmunizations = patientFilter && isPaginated
-    ? displayedImmunizations.slice((page - 1) * size, page * size)
-    : displayedImmunizations;
+  const localTotalPages = Math.ceil(displayedImmunizations.length / size) || 1;
+  const pagedImmunizations = displayedImmunizations.slice((page - 1) * size, page * size);
 
   const handleInputChange = (field: string, value: string) =>
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -272,13 +248,13 @@ const Immunizations = () => {
                   ? pagedImmunizations.length < displayedImmunizations.length
                     ? `Showing ${(page - 1) * size + 1}-${(page - 1) * size + pagedImmunizations.length} of ${displayedImmunizations.length} for "${patientFilter}"`
                     : `Showing ${displayedImmunizations.length} record(s) for "${patientFilter}"`
-                  : size === 1000 && !isPaginated
-                    ? `Showing all ${totalElements} records`
-                    : `Showing ${(page - 1) * size + 1}-${Math.min(page * size, totalElements)} of ${totalElements}`}
+                  : size >= displayedImmunizations.length
+                    ? `Showing all ${displayedImmunizations.length} records`
+                    : `Showing ${(page - 1) * size + 1}-${Math.min(page * size, displayedImmunizations.length)} of ${displayedImmunizations.length}`}
               </Text>
               {localTotalPages > 1 && (
                 <Pagination.Root
-                  count={patientFilter ? displayedImmunizations.length : totalElements}
+                  count={displayedImmunizations.length}
                   pageSize={size}
                   page={page}
                   onPageChange={(e) => setPage(e.page)}
