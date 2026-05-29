@@ -13,7 +13,6 @@ export interface ImmunizationDto {
   patientName?: string;
   tradeName: string;
   administrationDate: string;
-  administeredBy: string;
   facilityName: string;
   facilityAddress: string;
   notes?: string;

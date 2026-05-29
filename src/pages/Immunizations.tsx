@@ -24,7 +24,7 @@ const Immunizations = () => {
   });
   const [formData, setFormData] = useState<ImmunizationDto>({
     vaccineName: '', patientName: '', tradeName: '', administrationDate: '',
-    administeredBy: '', facilityName: '', facilityAddress: '', notes: '',
+    facilityName: '', facilityAddress: '', notes: '',
   });
   const [ocrOpen, setOcrOpen] = useState(false);
   const [ocrLoading, setOcrLoading] = useState(false);
@@ -72,7 +72,7 @@ const Immunizations = () => {
     try {
       await immunizationApi.create(formData);
       setOpened(false);
-      setFormData({ vaccineName: '', patientName: '', tradeName: '', administrationDate: '', administeredBy: '', facilityName: '', facilityAddress: '', notes: '' });
+      setFormData({ vaccineName: '', patientName: '', tradeName: '', administrationDate: '', facilityName: '', facilityAddress: '', notes: '' });
       fetchImmunizations();
     } catch {
       setError('Failed to add immunization');
@@ -194,10 +194,10 @@ const Immunizations = () => {
         <Table.Root>
           <Table.Header>
             <Table.Row>
-              {['patientName', 'vaccineName', 'tradeName', 'administrationDate', 'administeredBy', 'facilityName'].map((col) => (
+              {['patientName', 'vaccineName', 'tradeName', 'administrationDate', 'facilityName'].map((col) => (
                 <Table.ColumnHeader key={col} cursor="pointer" onClick={() => handleSort(col)}>
                   <HStack gap={1}>
-                    <Text>{col === 'vaccineName' ? 'Vaccine' : col === 'patientName' ? 'Person' : col === 'administrationDate' ? 'Date Administered' : col === 'administeredBy' ? 'Administered By' : col === 'facilityName' ? 'Facility' : col === 'tradeName' ? 'Trade Name' : col.charAt(0).toUpperCase() + col.slice(1)}</Text>
+                    <Text>{col === 'vaccineName' ? 'Vaccine' : col === 'patientName' ? 'Person' : col === 'administrationDate' ? 'Date Administered' : col === 'facilityName' ? 'Facility' : col === 'tradeName' ? 'Trade Name' : col.charAt(0).toUpperCase() + col.slice(1)}</Text>
                     <SortIcon column={col} />
                   </HStack>
                 </Table.ColumnHeader>
@@ -212,7 +212,6 @@ const Immunizations = () => {
                 <Table.Cell fontWeight="medium">{imm.vaccineName}</Table.Cell>
                 <Table.Cell>{imm.tradeName}</Table.Cell>
                 <Table.Cell>{formatDate(imm.administrationDate)}</Table.Cell>
-                <Table.Cell>{imm.administeredBy}</Table.Cell>
                 <Table.Cell>{imm.facilityName}</Table.Cell>
                 <Table.Cell>
                   <IconButton aria-label="Delete" colorPalette="red" variant="ghost" size="sm" onClick={() => handleDelete(imm.id!)}>
@@ -223,7 +222,7 @@ const Immunizations = () => {
             ))}
             {pagedImmunizations.length === 0 && (
               <Table.Row>
-                <Table.Cell colSpan={8} textAlign="center" color="gray.500">No immunization records found.</Table.Cell>
+                <Table.Cell colSpan={6} textAlign="center" color="gray.500">No immunization records found.</Table.Cell>
               </Table.Row>
             )}
           </Table.Body>
@@ -297,14 +296,10 @@ const Immunizations = () => {
                     <Field.Label>Trade Name</Field.Label>
                     <Input value={formData.tradeName} onChange={(e) => handleInputChange('tradeName', e.target.value)} placeholder="e.g. Pfizer-BioNTech LOT-123456" />
                   </Field.Root>
-                  <HStack gap={4} w="full">
+                  <HStack gap={2}>
                     <Field.Root flex={1}>
                       <Field.Label>Date Administered</Field.Label>
                       <Input type="date" value={formData.administrationDate} onChange={(e) => handleInputChange('administrationDate', e.target.value)} />
-                    </Field.Root>
-                    <Field.Root flex={1}>
-                      <Field.Label>Administered By</Field.Label>
-                      <Input value={formData.administeredBy} onChange={(e) => handleInputChange('administeredBy', e.target.value)} />
                     </Field.Root>
                   </HStack>
                   <Field.Root>
@@ -390,11 +385,6 @@ const Immunizations = () => {
                             </Field.Root>
                           </HStack>
                           <HStack gap={2}>
-                            <Field.Root flex={1}>
-                              <Field.Label fontSize="xs">Administered By</Field.Label>
-                              <Input size="sm" value={rec.administeredBy ?? ''}
-                                onChange={(e) => updateOcrRecord(i, 'administeredBy', e.target.value)} />
-                            </Field.Root>
                             <Field.Root flex={1}>
                               <Field.Label fontSize="xs">Facility</Field.Label>
                               <Input size="sm" value={rec.facilityName ?? ''}
